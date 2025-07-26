@@ -1,0 +1,64 @@
+/* Gmail-style email content styling */
+.email-content {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #202124;
+}
+
+.email-content div {
+  margin: 0;
+}
+
+.email-content p {
+  margin: 8px 0;
+}
+
+.email-content br {
+  line-height: 1.5;
+}
+
+.email-content blockquote {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 2px solid #ccc;
+  color: #666;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.email-content blockquote.gmail_quote {
+  margin: 0px 0px 0px 0.8ex;
+  border-left: 1px solid #ccc;
+  padding-left: 1ex;
+  background-color: transparent;
+}
+
+.email-content a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.email-content a:hover {
+  text-decoration: underline;
+}
+
+/* Gmail quote styling */
+.gmail_quote {
+  font-size: 12px !important;
+  color: #666 !important;
+}
+
+.gmail_attr {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+  .email-content {
+    font-size: 13px;
+  }
+}
