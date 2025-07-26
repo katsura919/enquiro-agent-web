@@ -1,0 +1,82 @@
+"use client";
+import * as React from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import api from '../utils/api';
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  businessId: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  console.log(user)
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => {
+    // Check for stored token and fetch user info
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/agent/info')
+        .then(res => {
+          setUser(res.data);
+        })
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem('token');
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await api.post('/auth/agent/login', { email, password });
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+      // Fetch user info after login
+      const userRes = await api.get('/agent/info', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(userRes.data);
+      router.push('/dashboard'); // Redirect to dashboard after login
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Login failed');
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    router.push('/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
