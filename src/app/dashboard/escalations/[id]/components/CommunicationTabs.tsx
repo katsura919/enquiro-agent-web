@@ -6,17 +6,7 @@ import { cn } from "@/lib/utils";
 import { MessageSquare, Mail } from "lucide-react";
 import { ConversationHistory } from "./ConversationHistory";
 import { EmailThread } from "./EmailThread";
-
-interface ChatMessage {
-  _id: string
-  businessId: string
-  sessionId: string
-  query: string
-  response: string
-  isGoodResponse?: boolean | null
-  createdAt: string
-  updatedAt: string
-}
+import type { ChatMessage } from "@/types/ChatMessage";
 
 interface EmailMessage {
   id: string;

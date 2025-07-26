@@ -34,16 +34,7 @@ interface Escalation {
   updatedAt: string
 }
 
-interface ChatMessage {
-  _id: string
-  businessId: string
-  sessionId: string
-  query: string
-  response: string
-  isGoodResponse?: boolean | null
-  createdAt: string
-  updatedAt: string
-}
+import type { ChatMessage } from "@/types/ChatMessage";
 
 interface EmailMessage {
   id: string;
