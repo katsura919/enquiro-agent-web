@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '../utils/api';
 
 interface User {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  console.log(user)
+
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   useEffect(() => {

@@ -1,11 +1,25 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import AgentDashboard from "@/components/AgentDashboard";
+import ChatNotification from "@/components/ChatNotification";
+import { getSocket } from "@/utils/socket";
+import api from "@/utils/api";
+
+interface PendingNotification {
+  escalationId: string;
+  escalation: {
+    customerName: string;
+    concern: string;
+    caseNumber: string;
+  };
+}
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [notifications, setNotifications] = useState<PendingNotification[]>([]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -13,15 +27,77 @@ export default function DashboardPage() {
     }
   }, [user, isLoading, router]);
 
+  // Listen for chat assignment notifications
+  useEffect(() => {
+    if (!user?.businessId) return;
+
+    const socket = getSocket();
+    
+    const handleChatStarted = async ({ agentId, escalationId }: { agentId: string; escalationId: string }) => {
+      if (agentId === user._id) {
+        try {
+          // Fetch escalation details for notification
+          const response = await api.get(`/escalation/${escalationId}`);
+          const escalation = response.data;
+          
+          setNotifications(prev => [...prev, {
+            escalationId,
+            escalation: {
+              customerName: escalation.customerName,
+              concern: escalation.concern,
+              caseNumber: escalation.caseNumber
+            }
+          }]);
+        } catch (error) {
+          console.error('[DashboardPage] Failed to fetch escalation details:', error);
+        }
+      }
+    };
+
+    socket.on('chat_started', handleChatStarted);
+
+    return () => {
+      socket.off('chat_started', handleChatStarted);
+    };
+  }, [user?._id, user?.businessId]);
+
+  const handleChatAccept = (escalationId: string) => {
+    // Remove notification
+    setNotifications(prev => prev.filter(n => n.escalationId !== escalationId));
+    
+    // Navigate to escalation page
+    router.push(`/dashboard/escalations/${escalationId}`);
+  };
+
+  const handleNotificationDismiss = (escalationId: string) => {
+    setNotifications(prev => prev.filter(n => n.escalationId !== escalationId));
+  };
+
   if (isLoading || !user) {
-    return null; // Or a spinner
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-950 to-gray-900 text-white">
-      <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}!</h1>
-      <p className="text-lg mb-2">You are logged in as <span className="font-mono">{user.email}</span></p>
-      <p className="text-base text-zinc-400">Business ID: {user.businessId}</p>
+    <div className="min-h-screen bg-background">
+      {/* Chat Notifications */}
+      {notifications.map((notification) => (
+        <ChatNotification
+          key={notification.escalationId}
+          escalationId={notification.escalationId}
+          customerName={notification.escalation.customerName}
+          concern={notification.escalation.concern}
+          caseNumber={notification.escalation.caseNumber}
+          onAccept={() => handleChatAccept(notification.escalationId)}
+          onDismiss={() => handleNotificationDismiss(notification.escalationId)}
+        />
+      ))}
+
+      {/* Main Dashboard */}
+      <AgentDashboard onChatAccept={handleChatAccept} />
     </div>
   );
 }
