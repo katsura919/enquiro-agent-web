@@ -62,7 +62,7 @@ export default function LoginPage() {
       <div className="w-full max-w-6xl flex flex-col md:flex-row rounded-3xl shadow-2xl overflow-hidden bg-gray-50 border-gray-200">
         {/* Left: Login Form */}
         <div className="w-full md:w-2/5 flex flex-col justify-center px-14 py-20 gap-10">
-          <div className="mb-8">
+          <div className="">
             <span className="inline-block px-4 py-1 rounded-full bg-gray-200 text-gray-700 font-semibold text-lg tracking-wide mb-4">Enquiro Agents</span>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign in to your account</h2>
             <p className="text-gray-500 text-sm">Customer Service Portal</p>
