@@ -265,11 +265,24 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Listen for agent disconnection during chat
+    const handleAgentDisconnectedDuringChat = (data: any) => {
+      console.log('[TabsContext] Agent disconnected during chat event:', data);
+      if (data.escalationId === chatWindowState.escalationId) {
+        setChatWindowStateInternal(prev => ({
+          ...prev,
+          connected: false,
+          disconnected: true // Prevent reconnection
+        }));
+      }
+    };
+
     socket.on("chat_started", handleChatStarted);
     socket.on("agent_joined", handleAgentJoined);
     socket.on("new_message", handleNewMessage);
     socket.on("customer_typing", handleCustomerTyping);
     socket.on("chat_ended", handleChatEnded);
+    socket.on("agent_disconnected_during_chat", handleAgentDisconnectedDuringChat);
 
     return () => {
       console.log('[TabsContext] Cleaning up persistent socket listeners for:', chatRoom);
@@ -278,6 +291,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       socket.off("new_message", handleNewMessage);
       socket.off("customer_typing", handleCustomerTyping);
       socket.off("chat_ended", handleChatEnded);
+      socket.off("agent_disconnected_during_chat", handleAgentDisconnectedDuringChat);
       
       // Don't leave room on cleanup - only when explicitly disconnecting
     };

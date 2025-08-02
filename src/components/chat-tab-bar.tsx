@@ -38,6 +38,9 @@ export default function ChatTabsBar() {
   // Agent status states
   const [isOnline, setIsOnline] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<'offline' | 'online' | 'available' | 'away' | 'in-chat'>('offline');
+  const [hasActiveChat, setHasActiveChat] = useState(false); // Track if there's an active chat session
+  console.log("status: ", currentStatus);
   const [customerInQueue, setCustomerInQueue] = useState(false);
   const [connected, setConnected] = useState(false);
   const [chatRoom, setChatRoom] = useState<string | null>(null);
@@ -61,6 +64,8 @@ export default function ChatTabsBar() {
           console.log("[Agent] This agent is assigned to the chat. Joining room:", room);
           setConnected(true);
           setChatRoom(room);
+          setCurrentStatus('in-chat'); // Agent is now in chat
+          setHasActiveChat(true); // Mark that we have an active chat
           let sessionId = undefined;
           let customerName = `Customer ${escalationId}`;
           let escalation = null;
@@ -129,6 +134,57 @@ export default function ChatTabsBar() {
         }
       });
 
+      // Listen for agent status updates from backend
+      socket.on("agent_status_update", ({ agentId: updatedAgentId, status }) => {
+        console.log("[Agent] agent_status_update event received", { updatedAgentId, status });
+        if (updatedAgentId === agentId) {
+          setCurrentStatus(status);
+          // Update local state based on status
+          switch (status) {
+            case 'offline':
+              setIsOnline(false);
+              setIsAvailable(false);
+              setConnected(false);
+              // Clear chat states when going offline
+              setChatRoom(null);
+              setEscalationDetails(null);
+              setHasNewMessage(false);
+              break;
+            case 'online':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(false);
+              break;
+            case 'available':
+              setIsOnline(true);
+              setIsAvailable(true);
+              setConnected(false);
+              break;
+            case 'away':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(false);
+              // Don't clear chat states here - let handleEndChat do it
+              // This allows the end chat button to remain visible
+              break;
+            case 'in-chat':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(true);
+              break;
+          }
+        }
+      });
+
+      // Listen for agent disconnection during chat
+      socket.on("agent_disconnected_during_chat", ({ agentId: disconnectedAgentId, escalationId, message }) => {
+        console.log("[Agent] agent_disconnected_during_chat event received", { disconnectedAgentId, escalationId, message });
+        if (disconnectedAgentId === agentId) {
+          // Show notification to agent about their disconnection (for debugging/awareness)
+          console.warn("[Agent] You were disconnected during an active chat:", message);
+        }
+      });
+
       socket.on("connect", () => {
         console.log("[Agent] Socket connected", socket.id);
       });
@@ -141,6 +197,8 @@ export default function ChatTabsBar() {
         socket.off("agent_joined", handleAgentJoined);
         socket.off("customer_waiting");
         socket.off("new_message");
+        socket.off("agent_status_update");
+        socket.off("agent_disconnected_during_chat");
         socket.off("connect");
         socket.off("disconnect");
         disconnectSocket();
@@ -174,13 +232,15 @@ export default function ChatTabsBar() {
   const goAvailable = () => {
     setIsAvailable(true);
     setCustomerInQueue(false);
+    setCurrentStatus('available');
     socketRef.current?.emit("update_status", { businessId, agentId, status: "available" });
   };
 
-  // Set agent unavailable (busy)
+  // Set agent unavailable (away)
   const goUnavailable = () => {
     setIsAvailable(false);
-    socketRef.current?.emit("update_status", { businessId, agentId, status: "busy" });
+    setCurrentStatus('away');
+    socketRef.current?.emit("update_status", { businessId, agentId, status: "away" });
   };
 
   // Go offline
@@ -190,6 +250,7 @@ export default function ChatTabsBar() {
     setConnected(false);
     setChatRoom(null);
     setCustomer(null);
+    setCurrentStatus('offline');
     socketRef.current?.emit("update_status", { businessId, agentId, status: "offline" });
     disconnectSocket();
   };
@@ -200,11 +261,12 @@ export default function ChatTabsBar() {
     const socket = getSocket();
     socket.emit('end_chat', { escalationId: escalationDetails?._id, agentId });
     
+    // Clear local chat state immediately
     setConnected(false);
     setChatRoom(null);
     setCustomer(null);
     setEscalationDetails(null);
-    setIsAvailable(false);
+    setHasActiveChat(false); // Clear active chat flag
     setChatWindowState({ 
       visible: false,
       escalationId: undefined,
@@ -214,8 +276,8 @@ export default function ChatTabsBar() {
     });
     setHasNewMessage(false);
     
-    // After ending, agent can go available again
-    goAvailable();
+    // Don't manually set status here - the backend will handle it and send 'agent_status_update' event
+    // The agent_status_update listener will automatically update the status to 'away'
   };
 
   const handleCloseChat = () => {
@@ -225,10 +287,20 @@ export default function ChatTabsBar() {
 
   // Get agent status display
   const getAgentStatus = () => {
-    if (!isOnline) return { text: "Offline", color: "bg-gray-500", icon: WifiOff };
-    if (connected) return { text: "In Chat", color: "bg-blue-500", icon: MessageSquare };
-    if (isAvailable) return { text: "Available", color: "bg-green-500", icon: Circle };
-    return { text: "Unavailable", color: "bg-yellow-500", icon: Clock };
+    switch (currentStatus) {
+      case 'offline':
+        return { text: "Offline", color: "bg-gray-500", icon: WifiOff };
+      case 'online':
+        return { text: "Online", color: "bg-blue-400", icon: Wifi };
+      case 'available':
+        return { text: "Available", color: "bg-green-500", icon: Circle };
+      case 'away':
+        return { text: "Away", color: "bg-yellow-500", icon: Clock };
+      case 'in-chat':
+        return { text: "In Chat", color: "bg-blue-600", icon: MessageSquare };
+      default:
+        return { text: "Offline", color: "bg-gray-500", icon: WifiOff };
+    }
   };
 
   const status = getAgentStatus();
@@ -275,7 +347,7 @@ export default function ChatTabsBar() {
             <div className="flex items-center gap-2 text-sm">
               <div className={`w-2 h-2 rounded-full ${status.color}`} />
               <span>{status.text}</span>
-              {connected && escalationDetails && (
+              {currentStatus === 'in-chat' && escalationDetails && (
                 <span className="text-muted-foreground">
                   - {escalationDetails.customerName}
                 </span>
@@ -285,16 +357,21 @@ export default function ChatTabsBar() {
 
           {/* Status Controls */}
           <div className="space-y-2">
-            {!isOnline ? (
+            {currentStatus === 'offline' ? (
               <Button
-                onClick={() => setIsOnline(true)}
+                onClick={() => {
+                  setIsOnline(true);
+                  setCurrentStatus('online');
+                  // Emit status update to backend
+                  socketRef.current?.emit("update_status", { businessId, agentId, status: "online" });
+                }}
                 className="w-full"
                 size="sm"
               >
                 <Wifi className="w-4 h-4 mr-2" />
                 Go Online
               </Button>
-            ) : !isAvailable && !connected ? (
+            ) : currentStatus === 'online' || currentStatus === 'away' ? (
               <div className="flex gap-2">
                 <Button
                   onClick={goAvailable}
@@ -313,7 +390,7 @@ export default function ChatTabsBar() {
                   Offline
                 </Button>
               </div>
-            ) : isAvailable && !connected ? (
+            ) : currentStatus === 'available' ? (
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
@@ -326,10 +403,10 @@ export default function ChatTabsBar() {
                   size="sm"
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  Go Unavailable
+                  Go Away
                 </Button>
               </div>
-            ) : connected ? (
+            ) : currentStatus === 'in-chat' ? (
               <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
                 ✓ Connected to chat
               </div>
@@ -352,7 +429,7 @@ export default function ChatTabsBar() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       {/* Chat Window - positioned above the tab bar when visible */}
-      {chatWindowState.visible && connected && escalationDetails && (
+      {chatWindowState.visible && escalationDetails && (
         <div className="absolute bottom-12 right-4 pointer-events-auto">
           <ChatWindow 
             id={escalationDetails._id} 
@@ -361,7 +438,7 @@ export default function ChatTabsBar() {
             businessId={escalationDetails.businessId} 
             sessionId={escalationDetails.sessionId}
             onClose={() => setChatWindowState({ visible: false })}
-            onEndChat={handleEndChat}
+            onEndChat={handleCloseChat}
           />
         </div>
       )}
@@ -414,10 +491,10 @@ export default function ChatTabsBar() {
 
           {/* Center - Status message */}
           <div className="flex-1 flex items-center justify-center">
-            {!connected && !agentToolVisible && (
+            {!escalationDetails && currentStatus !== 'in-chat' && !agentToolVisible && (
               <span className="text-sm text-muted-foreground">No active chats</span>
             )}
-            {connected && escalationDetails && (
+            {escalationDetails && (
               <span className="text-xs text-muted-foreground">
                 Connected to {escalationDetails.customerName || 'Customer'}
               </span>
@@ -426,34 +503,46 @@ export default function ChatTabsBar() {
 
           {/* Right side - Chat section */}
           <div className="flex items-center gap-2">
-            {/* Active chat tab */}
-            {connected && escalationDetails && (
-              <div 
-                className={`flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer transition-all duration-200 ${
-                  hasNewMessage 
-                    ? 'bg-orange-100 dark:bg-orange-900/50 blink-orange' 
-                    : 'bg-blue-100 dark:bg-blue-900/50'
-                }`}
-                onClick={() => {
-                  setChatWindowState({ visible: !chatWindowState.visible });
-                  if (hasNewMessage) {
-                    setHasNewMessage(false);
-                  }
-                }}
-              >
-                <div className={`w-2 h-2 rounded-full ${
-                  hasNewMessage ? 'bg-orange-500 blink-orange' : 'bg-blue-500'
-                }`} />
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {escalationDetails.customerName || 'Customer'}
-                </span>
-                {hasNewMessage && (
-                  <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 text-xs blink-orange">
-                    !
-                  </Badge>
-                )}
-              </div>
+            {/* Active chat tab - show if we have an active chat session */}
+            {hasActiveChat && (
+              <>
+                <div 
+                  className={`flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer transition-all duration-200 ${
+                    hasNewMessage 
+                      ? 'bg-orange-100 dark:bg-orange-900/50 blink-orange' 
+                      : 'bg-blue-100 dark:bg-blue-900/50'
+                  }`}
+                  onClick={() => {
+                    setChatWindowState({ visible: !chatWindowState.visible });
+                    if (hasNewMessage) {
+                      setHasNewMessage(false);
+                    }
+                  }}
+                >
+                  <div className={`w-2 h-2 rounded-full ${
+                    hasNewMessage ? 'bg-orange-500 blink-orange' : 'bg-blue-500'
+                  }`} />
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    {escalationDetails?.customerName || 'Customer'}
+                  </span>
+                  {hasNewMessage && (
+                    <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 text-xs blink-orange">
+                      !
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* End Chat Button */}
+                <Button
+                  onClick={handleEndChat}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-2 py-1 h-7"
+                >
+                  End Chat
+                </Button>
+              </>
             )}
           </div>
         </div>

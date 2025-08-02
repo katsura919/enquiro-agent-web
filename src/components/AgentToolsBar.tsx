@@ -100,18 +100,40 @@ export default function AgentToolsBar() {
         setCustomerInQueue(true);
       });
 
-      // Listen for chat ended event to reset agent status
-      socket.on("chat_ended", ({ escalationId, agentId: endedAgentId }) => {
-        console.log("[AgentToolsBar] chat_ended event received", { escalationId, endedAgentId, agentId });
-        if (endedAgentId === agentId) {
-          console.log("[AgentToolsBar] Chat ended for this agent, resetting status");
-          console.log("[AgentToolsBar] Before reset - connected:", connected, "isAvailable:", isAvailable);
-          setConnected(false);
-          setEscalationDetails(null);
-          setCustomerInQueue(false);
-          // Set agent back to available since backend already updated status
-          setIsAvailable(true);
-          console.log("[AgentToolsBar] After reset - should be: connected=false, isAvailable=true");
+      // Listen for agent status updates from backend
+      socket.on("agent_status_update", ({ agentId: updatedAgentId, status }) => {
+        console.log("[AgentToolsBar] agent_status_update event received", { updatedAgentId, status });
+        if (updatedAgentId === agentId) {
+          // Update local state based on status
+          switch (status) {
+            case 'offline':
+              setIsOnline(false);
+              setIsAvailable(false);
+              setConnected(false);
+              setEscalationDetails(null);
+              break;
+            case 'online':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(false);
+              break;
+            case 'available':
+              setIsOnline(true);
+              setIsAvailable(true);
+              setConnected(false);
+              break;
+            case 'away':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(false);
+              // Don't clear escalation details here - let handleEndChat do it
+              break;
+            case 'in-chat':
+              setIsOnline(true);
+              setIsAvailable(false);
+              setConnected(true);
+              break;
+          }
         }
       });
 
@@ -119,7 +141,7 @@ export default function AgentToolsBar() {
         socket.off("chat_started");
         socket.off("agent_joined", handleAgentJoined);
         socket.off("customer_waiting");
-        socket.off("chat_ended");
+        socket.off("agent_status_update");
       };
     } else {
       if (socketRef.current) {
@@ -138,7 +160,7 @@ export default function AgentToolsBar() {
   const goUnavailable = () => {
     setIsAvailable(false);
     const socket = getSocket();
-    socket.emit("update_status", { businessId, agentId, status: "online" });
+    socket.emit("update_status", { businessId, agentId, status: "away" });
   };
 
   const goOffline = () => {
@@ -150,9 +172,15 @@ export default function AgentToolsBar() {
   };
 
   const handleEndChat = () => {
+    const socket = getSocket();
+    socket.emit('end_chat', { escalationId: escalationDetails?._id, agentId });
+    
+    // Clear local chat state immediately
     setConnected(false);
     setEscalationDetails(null);
-    setIsAvailable(false);
+    
+    // Don't manually set status here - the backend will handle it and send 'agent_status_update' event
+    // The agent_status_update listener will automatically update the status to 'away'
   };
 
   const getStatus = () => {
@@ -183,7 +211,11 @@ export default function AgentToolsBar() {
           {/* Status Controls */}
           {!isOnline ? (
             <Button
-              onClick={() => setIsOnline(true)}
+              onClick={() => {
+                setIsOnline(true);
+                const socket = getSocket();
+                socket.emit("update_status", { businessId, agentId, status: "online" });
+              }}
               size="sm"
               className="flex items-center gap-2"
             >
@@ -221,12 +253,22 @@ export default function AgentToolsBar() {
                 size="sm"
               >
                 <Clock className="w-4 h-4 mr-2" />
-                Go Unavailable
+                Go Away
               </Button>
             </div>
           ) : connected ? (
-            <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
-              ✓ Connected to chat
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
+                ✓ Connected to chat
+              </div>
+              <Button
+                onClick={handleEndChat}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                End Chat
+              </Button>
             </div>
           ) : null}
         </div>
@@ -237,14 +279,6 @@ export default function AgentToolsBar() {
             {user?.firstName} {user?.lastName} • ID: {agentId}
           </div>
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </Button>
         </div>
       </div>
     </div>
