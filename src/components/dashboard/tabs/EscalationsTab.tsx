@@ -7,5 +7,12 @@ interface EscalationsTabProps {
 }
 
 export function EscalationsTab({ tab }: EscalationsTabProps) {
-  return <EscalationWrapper />;
+  // Watch for refresh signals from the tab context
+  const refreshKey = tab.data?.refreshKey;
+  
+  return (
+    <EscalationWrapper 
+      key={refreshKey} // Force re-mount on refresh
+    />
+  );
 }

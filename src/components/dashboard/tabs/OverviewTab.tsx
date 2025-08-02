@@ -22,6 +22,12 @@ interface OverviewTabProps {
 
 export function OverviewTab({ tab }: OverviewTabProps) {
   const { openTab } = useTabs();
+  
+  // Show refresh indicator if tab was recently refreshed
+  const refreshKey = tab.data?.refreshKey;
+  const lastRefresh = tab.data?.lastRefresh;
+  const now = Date.now();
+  const wasRecentlyRefreshed = lastRefresh && (now - lastRefresh) < 2000; // 2 seconds
 
   const stats = [
     { label: "Active Chats", value: "12", icon: MessageSquare, color: "text-blue-600" },
@@ -68,11 +74,19 @@ export function OverviewTab({ tab }: OverviewTabProps) {
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Agent Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's an overview of your current workload.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Agent Dashboard</h1>
+            <p className="text-muted-foreground">
+              Welcome back! Here's an overview of your current workload.
+            </p>
+          </div>
+          {wasRecentlyRefreshed && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
+              <CheckCircle className="w-4 h-4" />
+              Tab refreshed
+            </div>
+          )}
         </div>
 
         {/* Stats Grid */}

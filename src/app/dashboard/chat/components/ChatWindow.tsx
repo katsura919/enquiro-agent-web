@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useContext, useState } from "react";
 import ChatMessage from "./ChatMessage";
-import { useChatTabs } from "../../../../context/ChatTabsContext";
+import { useTabs } from "../../../../context/TabsContext";
 import { Send, User, AlertCircle, Clock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
@@ -18,19 +18,22 @@ interface ChatWindowProps {
   avatar: string;
   businessId: string;
   sessionId?: string;
+  onClose?: () => void; // Add close callback
+  onEndChat?: () => void; // Add end chat callback
 }
 
-export default function ChatWindow({ id, name, avatar, businessId, sessionId }: ChatWindowProps) {
+export default function ChatWindow({ id, name, avatar, businessId, sessionId, onClose, onEndChat }: ChatWindowProps) {
   const user = useAuth().user;
   const agentId = user?._id;
   const bottomRef = useRef<HTMLDivElement>(null);
-  const { closeTab } = useChatTabs();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { closeTab, chatWindowState, disconnectFromChat, addChatMessage } = useTabs();
   const [sending, setSending] = useState(false);
-  const [connected, setConnected] = useState(false);
   const [customerTyping, setCustomerTyping] = useState(false);
   const [escalationDetails, setEscalationDetails] = useState<any>(null);
+
+  // Get data from persistent state
+  const messages = chatWindowState.messages || [];
+  const connected = chatWindowState.connected || false;
 
   // Load escalation details
   useEffect(() => {
@@ -45,73 +48,25 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId }: 
     loadEscalationDetails();
   }, [id]);
 
-  // Load chat messages
+  // Listen for typing indicators (still need this for UI updates)
   useEffect(() => {
-    if (!sessionId) return;
-    setLoading(true);
-    api.get(`/chat/session/${sessionId}`)
-      .then(res => {
-        setMessages(res.data);
-      })
-      .catch(err => {
-        console.error('[ChatWindow] Failed to load messages:', err);
-        setMessages([]);
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
-
-  // Socket connection and message handling
-  useEffect(() => {
-    if (!sessionId || !id) return;
+    if (!sessionId || !id || !agentId) return;
     
     const socket = getSocket();
-    const chatRoom = `chat_${id}`;
-    
-    // Join the chat room
-    socket.emit('join_chat_room', { room: chatRoom, agentId, escalationId: id });
-    setConnected(true);
-    console.log(`[ChatWindow] Agent joined chat room: ${chatRoom}`);
-
-    // Listen for new messages
-    const handleNewMessage = (msg: any) => {
-      console.log('[ChatWindow] New message received:', msg);
-      if (msg.sessionId === sessionId || msg.escalationId === id) {
-        setMessages(prev => {
-          // Avoid duplicates
-          if (prev.find(m => m._id === msg._id)) return prev;
-          return [...prev, msg];
-        });
-      }
-    };
 
     // Listen for typing indicators
     const handleCustomerTyping = (data: any) => {
+      console.log('[ChatWindow] Customer typing event:', data);
       if (data.escalationId === id && data.senderType === 'customer') {
         setCustomerTyping(true);
         setTimeout(() => setCustomerTyping(false), 3000);
       }
     };
 
-    // Listen for agent assignment confirmation
-    const handleAgentJoined = (data: any) => {
-      console.log('[ChatWindow] Agent joined confirmation:', data);
-      if (data.agentId === agentId && data.escalationId === id) {
-        setConnected(true);
-      }
-    };
-
-    socket.on("new_message", handleNewMessage);
     socket.on("customer_typing", handleCustomerTyping);
-    socket.on("agent_joined", handleAgentJoined);
 
     return () => {
-      socket.off("new_message", handleNewMessage);
       socket.off("customer_typing", handleCustomerTyping);
-      socket.off("agent_joined", handleAgentJoined);
-      
-      // Leave the chat room
-      socket.emit('leave_chat_room', { room: chatRoom, agentId });
-      console.log(`[ChatWindow] Agent left chat room: ${chatRoom}`);
     };
   }, [sessionId, id, agentId]);
 
@@ -121,61 +76,26 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId }: 
   }, [messages, customerTyping]);
 
   const handleCloseChat = () => {
-    const socket = getSocket();
-    socket.emit('end_chat', { escalationId: id, agentId });
+    if (agentId) {
+      disconnectFromChat(agentId);
+    }
     closeTab(id);
+    onEndChat?.(); // Call the parent end chat callback
+    onClose?.(); // Also call the close callback
   };
 
   return (
-    <Card className="relative flex flex-col h-full w-full max-w-lg min-h-[540px] min-w-[380px] rounded-2xl shadow-xl overflow-hidden mx-auto border m-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
-        <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-          {avatar || name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-base truncate">{name}</span>
-            {connected && (
-              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
-                Live
-              </Badge>
-            )}
-          </div>
-          {escalationDetails && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              <span>Case: {escalationDetails.caseNumber}</span>
-              {sessionId && <span>• Session: {sessionId.slice(-8)}</span>}
-            </div>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCloseChat}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          ✕
-        </Button>
-      </div>
-
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-muted/10">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-            <span>Loading conversation...</span>
-          </div>
-        ) : messages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <User className="w-12 h-12 mb-2 opacity-50" />
             <span>No messages yet</span>
             <span className="text-xs">Start the conversation!</span>
           </div>
         ) : (
-          messages.map((msg) => (
+          messages.map((msg: any) => (
             <ChatMessage
               key={msg._id}
               sender={msg.senderType}
@@ -218,7 +138,7 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId }: 
           setSending={setSending}
         />
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -235,13 +155,14 @@ interface ChatInputModernProps {
 
 function ChatInputModern({ businessId, sessionId, agentId, escalationId, onMessageSent, sending, setSending }: ChatInputModernProps) {
   const [input, setInput] = React.useState("");
+  const { addChatMessage } = useTabs();
   
   const sendMessage = async () => {
     if (!input.trim() || !sessionId || !agentId) return;
     
     setSending(true);
     try {
-      await api.post("/chat/send-message", {
+      const response = await api.post("/chat/send-message", {
         businessId,
         sessionId,
         message: input,
@@ -249,6 +170,12 @@ function ChatInputModern({ businessId, sessionId, agentId, escalationId, onMessa
         agentId,
         escalationId
       });
+      
+      // Add the message to persistent state (backend will also emit via socket)
+      if (response.data?.data) {
+        addChatMessage(response.data.data);
+      }
+      
       setInput("");
       onMessageSent();
       

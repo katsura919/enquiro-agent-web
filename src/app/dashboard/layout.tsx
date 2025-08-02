@@ -7,7 +7,8 @@ import { TabContent } from "@/components/dashboard/TabContent";
 import { useTabs } from "@/context/TabsContext";
 import { useEffect } from "react";
 import { ChatTabsProvider } from "@/context/ChatTabsContext";
-import ChatTabsBar from "@/components/chat-tab-bar";
+import ChatPanel from "@/components/ChatPanel";
+import AgentToolsBar from "@/components/AgentToolsBar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -34,14 +35,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Tab Bar */}
         <TabBar />
         
-        {/* Main Content Area - Add bottom padding for the chat bar */}
-        <div className="flex-1 flex overflow-hidden pb-12">
-          {/* Tab Content */}
-          <TabContent />
+        {/* Main Content Area - Now with chat panel on right */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left: Tab Content */}
+          <div className="flex-1 flex overflow-hidden">
+            <TabContent />
+          </div>
+          
+          {/* Right: Chat Panel - Only show when chat is active */}
+          <ChatPanel />
         </div>
         
-        {/* Chat Tabs Bar (full-width bottom bar) */}
-        <ChatTabsBar />
+        {/* Agent Tools Bar (bottom bar with agent tools only) */}
+        <AgentToolsBar />
       </div>
     </ChatTabsProvider>
   );

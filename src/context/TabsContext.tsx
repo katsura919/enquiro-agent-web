@@ -1,5 +1,6 @@
 "use client";
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from "react";
+import { getSocket } from "@/utils/socket";
 
 export interface Tab {
   id: string;
@@ -11,9 +12,21 @@ export interface Tab {
   modified?: boolean; // For unsaved changes indication
 }
 
+export interface ChatWindowState {
+  visible: boolean;
+  escalationId?: string;
+  customerName?: string;
+  sessionId?: string;
+  businessId?: string;
+  connected?: boolean;
+  messages?: any[];
+  disconnected?: boolean; // Flag to prevent reconnection
+}
+
 interface TabsContextType {
   tabs: Tab[];
   activeTabId: string | null;
+  chatWindowState: ChatWindowState;
   setActiveTab: (id: string) => void;
   openTab: (tab: Omit<Tab, 'id'> & { id?: string }) => string;
   closeTab: (id: string) => void;
@@ -23,6 +36,10 @@ interface TabsContextType {
   refreshTab: (id: string) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (keepTabId: string) => void;
+  setChatWindowState: (state: Partial<ChatWindowState>) => void;
+  connectToChat: (escalationId: string, sessionId: string, businessId: string, customerName: string, agentId: string) => void;
+  disconnectFromChat: (agentId: string) => void;
+  addChatMessage: (message: any) => void;
   isInitialized: boolean;
 }
 
@@ -31,6 +48,7 @@ const TabsContext = createContext<TabsContextType | undefined>(undefined);
 // Storage keys
 const TABS_STORAGE_KEY = 'agent-dashboard-tabs';
 const ACTIVE_TAB_STORAGE_KEY = 'agent-dashboard-active-tab';
+const CHAT_WINDOW_STORAGE_KEY = 'agent-dashboard-chat-window';
 
 // Helper functions for localStorage
 const saveTabsToStorage = (tabs: Tab[], activeTabId: string | null) => {
@@ -42,6 +60,26 @@ const saveTabsToStorage = (tabs: Tab[], activeTabId: string | null) => {
   } catch (error) {
     console.warn('Failed to save tabs to localStorage:', error);
   }
+};
+
+const saveChatWindowToStorage = (chatWindowState: ChatWindowState) => {
+  try {
+    localStorage.setItem(CHAT_WINDOW_STORAGE_KEY, JSON.stringify(chatWindowState));
+  } catch (error) {
+    console.warn('Failed to save chat window state to localStorage:', error);
+  }
+};
+
+const loadChatWindowFromStorage = (): ChatWindowState => {
+  try {
+    const saved = localStorage.getItem(CHAT_WINDOW_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.warn('Failed to load chat window state from localStorage:', error);
+  }
+  return { visible: false };
 };
 
 const loadTabsFromStorage = (): { tabs: Tab[], activeTabId: string | null } => {
@@ -89,11 +127,13 @@ const loadTabsFromStorage = (): { tabs: Tab[], activeTabId: string | null } => {
 export function TabsProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [chatWindowState, setChatWindowStateInternal] = useState<ChatWindowState>({ visible: false });
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load tabs from localStorage on mount
   useEffect(() => {
     const { tabs: savedTabs, activeTabId: savedActiveTabId } = loadTabsFromStorage();
+    const savedChatWindow = loadChatWindowFromStorage();
     
     if (savedTabs.length > 0) {
       setTabs(savedTabs);
@@ -103,6 +143,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       initializeDefaultTabsInternal();
     }
     
+    setChatWindowStateInternal(savedChatWindow);
     setIsInitialized(true);
   }, []);
 
@@ -112,6 +153,139 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       saveTabsToStorage(tabs, activeTabId);
     }
   }, [tabs, activeTabId, isInitialized]);
+
+  // Save chat window state to localStorage whenever it changes (but only after initialization)
+  useEffect(() => {
+    if (isInitialized) {
+      saveChatWindowToStorage(chatWindowState);
+    }
+  }, [chatWindowState, isInitialized]);
+
+  // Persistent socket connection management for chat
+  useEffect(() => {
+    if (!isInitialized || 
+        !chatWindowState.escalationId || 
+        !chatWindowState.sessionId || 
+        chatWindowState.disconnected) {
+      // Don't set up socket listeners if chat is permanently disconnected
+      if (chatWindowState.disconnected) {
+        console.log('[TabsContext] Chat is disconnected, not setting up socket listeners');
+      }
+      return;
+    }
+
+    const socket = getSocket();
+    const chatRoom = `chat_${chatWindowState.escalationId}`;
+    
+    console.log('[TabsContext] Setting up persistent socket listeners for:', {
+      escalationId: chatWindowState.escalationId,
+      sessionId: chatWindowState.sessionId,
+      chatRoom
+    });
+
+    // Load messages if we don't have them yet
+    if (!chatWindowState.messages || chatWindowState.messages.length === 0) {
+      import('@/utils/api').then(({ default: api }) => {
+        api.get(`/chat/session/${chatWindowState.sessionId}`)
+          .then(res => {
+            setChatWindowStateInternal(prev => ({
+              ...prev,
+              messages: res.data || []
+            }));
+          })
+          .catch(err => {
+            console.error('[TabsContext] Failed to load messages:', err);
+          });
+      });
+    }
+
+    // Listen for chat started event (from backend assignment)
+    const handleChatStarted = (data: any) => {
+      console.log('[TabsContext] Chat started event:', data);
+      if (data.escalationId === chatWindowState.escalationId) {
+        // Now we can join the room as the chat has officially started
+        socket.emit('join_chat_room', { 
+          room: data.room || chatRoom, 
+          agentId: data.agentId,
+          escalationId: data.escalationId 
+        });
+        
+        setChatWindowStateInternal(prev => ({
+          ...prev,
+          connected: true
+        }));
+      }
+    };
+
+    // Listen for agent joined confirmation
+    const handleAgentJoined = (data: any) => {
+      console.log('[TabsContext] Agent joined confirmation:', data);
+      if (data.escalationId === chatWindowState.escalationId) {
+        setChatWindowStateInternal(prev => ({
+          ...prev,
+          connected: true
+        }));
+      }
+    };
+
+    // Listen for new messages
+    const handleNewMessage = (msg: any) => {
+      console.log('[TabsContext] New message received:', msg);
+      if (msg.sessionId === chatWindowState.sessionId || 
+          msg.escalationId === chatWindowState.escalationId || 
+          (msg.escalationId && msg.escalationId.toString() === chatWindowState.escalationId)) {
+        
+        setChatWindowStateInternal(prev => {
+          const existingMessages = prev.messages || [];
+          // Avoid duplicates
+          if (existingMessages.find(m => m._id === msg._id)) return prev;
+          return {
+            ...prev,
+            messages: [...existingMessages, msg]
+          };
+        });
+      }
+    };
+
+    // Listen for typing indicators
+    const handleCustomerTyping = (data: any) => {
+      console.log('[TabsContext] Customer typing event:', data);
+      // Handle typing indicator in the chat window state if needed
+    };
+
+    // Listen for chat ended
+    const handleChatEnded = (data: any) => {
+      console.log('[TabsContext] Chat ended event:', data);
+      if (data.escalationId === chatWindowState.escalationId) {
+        setChatWindowStateInternal(prev => ({
+          ...prev,
+          connected: false,
+          disconnected: true // Prevent reconnection
+        }));
+      }
+    };
+
+    socket.on("chat_started", handleChatStarted);
+    socket.on("agent_joined", handleAgentJoined);
+    socket.on("new_message", handleNewMessage);
+    socket.on("customer_typing", handleCustomerTyping);
+    socket.on("chat_ended", handleChatEnded);
+
+    return () => {
+      console.log('[TabsContext] Cleaning up persistent socket listeners for:', chatRoom);
+      socket.off("chat_started", handleChatStarted);
+      socket.off("agent_joined", handleAgentJoined);
+      socket.off("new_message", handleNewMessage);
+      socket.off("customer_typing", handleCustomerTyping);
+      socket.off("chat_ended", handleChatEnded);
+      
+      // Don't leave room on cleanup - only when explicitly disconnecting
+    };
+  }, [isInitialized, chatWindowState.escalationId, chatWindowState.sessionId, chatWindowState.disconnected]);
+
+  const setChatWindowState = useCallback((updates: Partial<ChatWindowState>) => {
+    setChatWindowStateInternal(prev => ({ ...prev, ...updates }));
+  }, []);
 
   const setActiveTab = useCallback((id: string) => {
     setActiveTabId(id);
@@ -211,20 +385,23 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const tab = tabs.find(t => t.id === id);
     if (!tab) return;
 
-    // Trigger a refresh by updating the tab's data or timestamp
+    // Force refresh by updating a refresh key that components can watch
+    const refreshKey = Date.now();
     updateTab(id, { 
       data: { 
         ...tab.data, 
-        lastRefresh: Date.now() 
+        refreshKey,
+        lastRefresh: refreshKey
       } 
     });
 
     // You can add specific refresh logic here based on tab type
-    // For example, for escalation tabs, you might want to refetch data
     if (tab.type === 'escalations') {
       // Trigger escalation data refresh
       updateTab(id, { modified: false });
     }
+    
+    console.log(`Tab refreshed: ${tab.title} (${id}) with refreshKey: ${refreshKey}`);
   }, [tabs, updateTab]);
 
   // Function to close all tabs except the overview tab
@@ -255,10 +432,65 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setActiveTabId(keepTabId);
   }, [tabs]);
 
+  // Function to connect to a chat and manage persistent socket connection
+  const connectToChat = useCallback((escalationId: string, sessionId: string, businessId: string, customerName: string, agentId: string) => {
+    console.log('[TabsContext] Setting up persistent chat connection for:', { escalationId, sessionId, businessId, customerName, agentId });
+    
+    // Only set up the persistent state - don't join room yet
+    // The socket connection will be managed by the socket effect when needed
+    setChatWindowStateInternal(prev => ({
+      ...prev,
+      visible: true,
+      escalationId,
+      sessionId,
+      businessId,
+      customerName,
+      connected: false, // Will be set to true when socket events confirm connection
+      disconnected: false, // Reset disconnected flag for new chat
+      messages: [] // Start with empty messages, will be loaded
+    }));
+  }, []);
+
+  // Function to disconnect from chat completely
+  const disconnectFromChat = useCallback((agentId: string) => {
+    console.log('[TabsContext] Disconnecting from chat permanently');
+    
+    if (chatWindowState.escalationId) {
+      const socket = getSocket();
+      const chatRoom = `chat_${chatWindowState.escalationId}`;
+      socket.emit('leave_chat_room', { room: chatRoom, agentId });
+      socket.emit('end_chat', { 
+        escalationId: chatWindowState.escalationId, 
+        agentId
+      });
+    }
+
+    setChatWindowStateInternal({
+      visible: false,
+      connected: false,
+      disconnected: true, // Prevent any future reconnection
+      messages: []
+    });
+  }, [chatWindowState.escalationId]);
+
+  // Function to add a message to the chat state
+  const addChatMessage = useCallback((message: any) => {
+    setChatWindowStateInternal(prev => {
+      const existingMessages = prev.messages || [];
+      // Avoid duplicates
+      if (existingMessages.find(m => m._id === message._id)) return prev;
+      return {
+        ...prev,
+        messages: [...existingMessages, message]
+      };
+    });
+  }, []);
+
   return (
     <TabsContext.Provider value={{
       tabs,
       activeTabId,
+      chatWindowState,
       setActiveTab,
       openTab,
       closeTab,
@@ -268,6 +500,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       refreshTab,
       closeAllTabs,
       closeOtherTabs,
+      setChatWindowState,
+      connectToChat,
+      disconnectFromChat,
+      addChatMessage,
       isInitialized,
     }}>
       {children}

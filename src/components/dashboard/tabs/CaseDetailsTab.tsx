@@ -465,12 +465,18 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
 export function CaseDetailsTab({ tab }: CaseDetailsTabProps) {
   const { updateTab } = useTabs();
   const caseData = tab.data;
+  
+  // Watch for refresh signals from the tab context
+  const refreshKey = tab.data?.refreshKey;
 
   // If it's an escalation type, render the existing escalation detail component
   if (caseData?.type === "escalation") {
     return (
       <div className="flex-1 overflow-auto">
-        <EscalationDetailsWrapper escalationId={caseData.escalationId} />
+        <EscalationDetailsWrapper 
+          escalationId={caseData.escalationId} 
+          key={refreshKey} // Force re-mount on refresh
+        />
       </div>
     );
   }

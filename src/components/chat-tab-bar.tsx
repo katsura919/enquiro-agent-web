@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useChatTabs } from "../context/ChatTabsContext";
+import { useTabs } from "@/context/TabsContext";
 import ChatWindow from "../app/dashboard/chat/components/ChatWindow";
 import api from "../utils/api";
 import { getSocket, disconnectSocket } from "../utils/socket";
@@ -26,6 +27,7 @@ export default function ChatTabsBar() {
   const router = useRouter();
   const { user } = useAuth();
   const { tabs, closeTab } = useChatTabs();
+  const { openTab, chatWindowState, setChatWindowState, connectToChat } = useTabs();
   const agentId = user?._id;
   const businessId = user?.businessId;
 
@@ -41,8 +43,9 @@ export default function ChatTabsBar() {
   const [chatRoom, setChatRoom] = useState<string | null>(null);
   const [customer, setCustomer] = useState<{ id: number; name: string; avatar: string; sessionId?: string } | null>(null);
   const [escalationDetails, setEscalationDetails] = useState<any>(null);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
   const socketRef = useRef<any>(null);
-  console.log(escalationDetails)
+
   // Connect/disconnect socket
   useEffect(() => {
     if (isOnline) {
@@ -69,10 +72,32 @@ export default function ChatTabsBar() {
               escalation = res.data;
               setEscalationDetails(res.data);
               console.log("[Agent] Escalation details fetched", res.data);
+              
+              // Use the new connectToChat function for persistent connection
+              if (agentId) {
+                connectToChat(
+                  escalationId, 
+                  res.data.sessionId, 
+                  res.data.businessId, 
+                  res.data.customerName,
+                  agentId
+                );
+              }
+              
+              // Open new tab with case details instead of routing
+              openTab({
+                title: `Case ${res.data.caseNumber || escalationId}`,
+                type: 'case-details',
+                data: {
+                  type: 'escalation',
+                  escalationId: escalationId,
+                  caseId: res.data.caseNumber || escalationId,
+                  customerName: res.data.customerName
+                }
+              });
             } catch (err) {
               console.error("[Agent] Failed to fetch escalation details", err);
             }
-            router.push(`/dashboard/escalations/${escalationId}`);
           }
          
         }
@@ -93,6 +118,17 @@ export default function ChatTabsBar() {
         setCustomerInQueue(true);
       });
 
+      // Listen for new messages to show notification
+      socket.on("new_message", (message) => {
+        console.log("[Agent] new_message event received", message);
+        if (message.escalationId === escalationDetails?._id && message.senderType === 'customer') {
+          // Only show notification if chat window is not visible
+          if (!chatWindowState.visible) {
+            setHasNewMessage(true);
+          }
+        }
+      });
+
       socket.on("connect", () => {
         console.log("[Agent] Socket connected", socket.id);
       });
@@ -104,12 +140,34 @@ export default function ChatTabsBar() {
         socket.off("chat_started");
         socket.off("agent_joined", handleAgentJoined);
         socket.off("customer_waiting");
+        socket.off("new_message");
         socket.off("connect");
         socket.off("disconnect");
         disconnectSocket();
       };
     }
-  }, [isOnline, agentId, businessId]);
+  }, [isOnline, agentId, businessId, escalationDetails?._id, chatWindowState.visible]);
+
+  // Restore chat connection on component mount if there's persistent chat state
+  useEffect(() => {
+    if (chatWindowState.escalationId && isOnline && !connected) {
+      // Restore escalation details and connection
+      const restoreChat = async () => {
+        try {
+          const res = await api.get(`/escalation/${chatWindowState.escalationId}`);
+          setEscalationDetails(res.data);
+          setConnected(true);
+          setChatRoom(`chat_${chatWindowState.escalationId}`);
+          console.log("[Agent] Restored chat connection", res.data);
+        } catch (err) {
+          console.error("[Agent] Failed to restore chat connection", err);
+          // Clear invalid chat state
+          setChatWindowState({ visible: false });
+        }
+      };
+      restoreChat();
+    }
+  }, [chatWindowState.escalationId, isOnline, connected, setChatWindowState]);
 
 
   // Set agent available for chat
@@ -147,6 +205,14 @@ export default function ChatTabsBar() {
     setCustomer(null);
     setEscalationDetails(null);
     setIsAvailable(false);
+    setChatWindowState({ 
+      visible: false,
+      escalationId: undefined,
+      customerName: undefined,
+      sessionId: undefined,
+      businessId: undefined
+    });
+    setHasNewMessage(false);
     
     // After ending, agent can go available again
     goAvailable();
@@ -174,7 +240,7 @@ export default function ChatTabsBar() {
       {/* Tab header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-      
+
           <Badge variant="secondary" className={`text-xs ${status.color} text-white`}>
             <StatusIcon className="w-3 h-3 mr-1" />
             {status.text}
@@ -264,15 +330,9 @@ export default function ChatTabsBar() {
                 </Button>
               </div>
             ) : connected ? (
-              <Button
-                onClick={handleEndChat}
-                variant="destructive"
-                className="w-full"
-                size="sm"
-              >
-                <X className="w-4 h-4 mr-2" />
-                End Chat
-              </Button>
+              <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
+                ✓ Connected to chat
+              </div>
             ) : null}
           </div>
 
@@ -291,58 +351,32 @@ export default function ChatTabsBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
-      {/* Chat windows and agent tool panel positioned above the tab bar */}
-      <div className="absolute bottom-12 left-0 right-0 flex justify-end items-end gap-4 px-4 pointer-events-none">
-        {/* Active chat windows */}
-        {connected && escalationDetails && (
-          <div className="pointer-events-auto">
-            <ChatWindow 
-              id={escalationDetails._id} 
-              name={escalationDetails.customerName} 
-              avatar={escalationDetails.customerName?.charAt(0).toUpperCase() || 'C'} 
-              businessId={escalationDetails.businessId} 
-              sessionId={escalationDetails.sessionId} 
-            />
-          </div>
-        )}
+      {/* Chat Window - positioned above the tab bar when visible */}
+      {chatWindowState.visible && connected && escalationDetails && (
+        <div className="absolute bottom-12 right-4 pointer-events-auto">
+          <ChatWindow 
+            id={escalationDetails._id} 
+            name={escalationDetails.customerName} 
+            avatar={escalationDetails.customerName?.charAt(0).toUpperCase() || 'C'} 
+            businessId={escalationDetails.businessId} 
+            sessionId={escalationDetails.sessionId}
+            onClose={() => setChatWindowState({ visible: false })}
+            onEndChat={handleEndChat}
+          />
+        </div>
+      )}
 
-        {/* Agent Tool Panel */}
-        {agentToolVisible && (
-          <div className="pointer-events-auto">
-            <AgentToolPanel />
-          </div>
-        )}
-      </div>
+      {/* Agent Tool Panel - positioned above the tab bar when visible */}
+      {agentToolVisible && (
+        <div className="absolute bottom-12 left-4 pointer-events-auto">
+          <AgentToolPanel />
+        </div>
+      )}
 
       {/* Bottom tab bar - full width */}
       <div className="w-full bg-background/95 backdrop-blur-sm border-t border-border shadow-lg">
         <div className="flex items-center justify-between px-4 py-2">
-          {/* Left side - Chat tabs */}
-          <div className="flex items-center gap-2 flex-1">
-            {tabs.length === 0 && !connected && !agentToolVisible && (
-              <span className="text-sm text-muted-foreground">No active chats</span>
-            )}
-            
-            {/* Active chat tab */}
-            {connected && escalationDetails && (
-              <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-md">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">
-                  {escalationDetails.customerName || 'Customer'}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 ml-1"
-                  onClick={handleEndChat}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Right side - Agent tool tab */}
+          {/* Left side - Agent Tools */}
           <div className="flex items-center gap-2">
             {/* Agent status indicator */}
             <div className="flex items-center gap-2 text-sm">
@@ -376,6 +410,51 @@ export default function ChatTabsBar() {
                 </Badge>
               )}
             </Button>
+          </div>
+
+          {/* Center - Status message */}
+          <div className="flex-1 flex items-center justify-center">
+            {!connected && !agentToolVisible && (
+              <span className="text-sm text-muted-foreground">No active chats</span>
+            )}
+            {connected && escalationDetails && (
+              <span className="text-xs text-muted-foreground">
+                Connected to {escalationDetails.customerName || 'Customer'}
+              </span>
+            )}
+          </div>
+
+          {/* Right side - Chat section */}
+          <div className="flex items-center gap-2">
+            {/* Active chat tab */}
+            {connected && escalationDetails && (
+              <div 
+                className={`flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer transition-all duration-200 ${
+                  hasNewMessage 
+                    ? 'bg-orange-100 dark:bg-orange-900/50 blink-orange' 
+                    : 'bg-blue-100 dark:bg-blue-900/50'
+                }`}
+                onClick={() => {
+                  setChatWindowState({ visible: !chatWindowState.visible });
+                  if (hasNewMessage) {
+                    setHasNewMessage(false);
+                  }
+                }}
+              >
+                <div className={`w-2 h-2 rounded-full ${
+                  hasNewMessage ? 'bg-orange-500 blink-orange' : 'bg-blue-500'
+                }`} />
+                <MessageSquare className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {escalationDetails.customerName || 'Customer'}
+                </span>
+                {hasNewMessage && (
+                  <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 text-xs blink-orange">
+                    !
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

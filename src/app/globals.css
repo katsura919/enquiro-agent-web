@@ -137,4 +137,20 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Custom blinking animation for chat notifications */
+  @keyframes blink-orange {
+    0%, 50% { 
+      background-color: rgb(249 115 22); /* orange-500 */
+      box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+    }
+    51%, 100% { 
+      background-color: rgb(234 88 12); /* orange-600 */
+      box-shadow: 0 0 12px rgba(234, 88, 12, 0.7);
+    }
+  }
+
+  .blink-orange {
+    animation: blink-orange 1s ease-in-out infinite;
+  }
 }
