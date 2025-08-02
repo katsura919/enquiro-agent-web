@@ -30,7 +30,6 @@ api.interceptors.response.use(
       // Token expired or invalid
       if (typeof window !== 'undefined') {
         localStorage.removeItem("token");
-        window.location.href = "/auth/login";
       }
     }
     return Promise.reject(error);

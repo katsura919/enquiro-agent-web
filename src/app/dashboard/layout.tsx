@@ -12,7 +12,6 @@ import AgentToolsBar from "@/components/AgentToolsBar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  const { tabs, activeTabId } = useTabs();
 
   if (isLoading) {
     return (
@@ -24,7 +23,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) {
     redirect('/');
+    return null;
   }
+
+  return <DashboardContent>{children}</DashboardContent>;
+}
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { tabs, activeTabId } = useTabs();
 
   return (
     <ChatTabsProvider>

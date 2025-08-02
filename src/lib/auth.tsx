@@ -47,6 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await api.post('/auth/agent/login', { email, password });
+      if (response.data.success === false) {
+        throw new Error(response.data.message || 'Login failed');
+      }
       const { token } = response.data;
       localStorage.setItem('token', token);
       // Fetch user info after login
@@ -54,16 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(userRes.data);
-      router.push('/dashboard'); // Redirect to dashboard after login
+      router.push('/dashboard'); 
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Login failed');
+      throw new Error(error.response?.data?.message || error.message || 'Login failed');
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    router.push('/login');
+    // Use window.location instead of router.push to force a full page reload
+    // This ensures all hooks and context are properly reset
+    window.location.href = '/';
   };
 
   return (
