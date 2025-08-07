@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TabsProvider } from "@/context/TabsContext";
+import { ToastContainer } from "@/components/ui/toast";
 import { Inter } from "next/font/google";
 const inter = Inter({
   subsets: ["latin"],
@@ -45,6 +46,7 @@ export default function RootLayout({
             <AuthProvider>
               <TabsProvider>
                 {children}
+                <ToastContainer />
               </TabsProvider>
             </AuthProvider>
         </ThemeProvider>

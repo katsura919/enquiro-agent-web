@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useContext, useState } from "react";
 import ChatMessage from "./ChatMessage";
+import ChatInput from "./ChatInput";
 import { useTabs } from "../../../../context/TabsContext";
 import { Send, User, AlertCircle, Clock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -100,6 +101,7 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId, on
               key={msg._id}
               sender={msg.senderType}
               text={msg.message}
+              attachments={msg.attachments}
               time={new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               systemMessageType={msg.systemMessageType}
             />
@@ -127,7 +129,7 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId, on
 
       {/* Input Area */}
       <div className="p-3 border-t bg-background">
-        <ChatInputModern
+        <ChatInput
           businessId={businessId}
           sessionId={sessionId}
           agentId={agentId || ''}
@@ -140,91 +142,6 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId, on
         />
       </div>
     </div>
-  );
-}
-
-// Modern chat input with icon button
-interface ChatInputModernProps {
-  businessId: string;
-  sessionId?: string;
-  agentId: string;
-  escalationId: string;
-  onMessageSent: () => void;
-  sending: boolean;
-  setSending: (sending: boolean) => void;
-}
-
-function ChatInputModern({ businessId, sessionId, agentId, escalationId, onMessageSent, sending, setSending }: ChatInputModernProps) {
-  const [input, setInput] = React.useState("");
-  const { addChatMessage } = useTabs();
-  
-  const sendMessage = async () => {
-    if (!input.trim() || !sessionId || !agentId) return;
-    
-    setSending(true);
-    try {
-      const response = await api.post("/chat/send-message", {
-        businessId,
-        sessionId,
-        message: input,
-        senderType: "agent",
-        agentId,
-        escalationId
-      });
-      
-      // Add the message to persistent state (backend will also emit via socket)
-      if (response.data?.data) {
-        addChatMessage(response.data.data);
-      }
-      
-      setInput("");
-      onMessageSent();
-      
-      // Emit typing stopped
-      const socket = getSocket();
-      socket.emit('agent_stopped_typing', { escalationId, agentId });
-    } catch (err) {
-      console.error('[ChatInputModern] Error sending message:', err);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  // Handle typing events
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-    
-    // Emit typing event
-    const socket = getSocket();
-    socket.emit('agent_typing', { escalationId, agentId });
-  };
-
-  return (
-    <form 
-      className="flex items-center gap-2 bg-muted/50 rounded-full px-3 py-2 border" 
-      onSubmit={e => { e.preventDefault(); sendMessage(); }}
-    >
-      <input
-        className="flex-1 rounded-full px-3 py-1.5 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none text-sm"
-        value={input}
-        onChange={handleInputChange}
-        placeholder="Type your message..."
-        autoComplete="off"
-        disabled={sending || !sessionId}
-      />
-      <Button
-        type="submit"
-        size="sm"
-        disabled={sending || !input.trim() || !sessionId}
-        className="rounded-full p-2 h-8 w-8"
-      >
-        {sending ? (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
-        ) : (
-          <Send className="w-4 h-4" />
-        )}
-      </Button>
-    </form>
   );
 }
 
