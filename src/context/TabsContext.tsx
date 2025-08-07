@@ -277,12 +277,32 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Listen for system messages
+    const handleSystemMessage = (msg: any) => {
+      console.log('[TabsContext] System message received:', msg);
+      if (msg.sessionId === chatWindowState.sessionId || 
+          msg.escalationId === chatWindowState.escalationId || 
+          (msg.escalationId && msg.escalationId.toString() === chatWindowState.escalationId)) {
+        
+        setChatWindowStateInternal(prev => {
+          const existingMessages = prev.messages || [];
+          // Avoid duplicates
+          if (existingMessages.find(m => m._id === msg._id)) return prev;
+          return {
+            ...prev,
+            messages: [...existingMessages, msg]
+          };
+        });
+      }
+    };
+
     socket.on("chat_started", handleChatStarted);
     socket.on("agent_joined", handleAgentJoined);
     socket.on("new_message", handleNewMessage);
     socket.on("customer_typing", handleCustomerTyping);
     socket.on("chat_ended", handleChatEnded);
     socket.on("agent_disconnected_during_chat", handleAgentDisconnectedDuringChat);
+    socket.on("system_message", handleSystemMessage);
 
     return () => {
       console.log('[TabsContext] Cleaning up persistent socket listeners for:', chatRoom);
@@ -292,6 +312,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       socket.off("customer_typing", handleCustomerTyping);
       socket.off("chat_ended", handleChatEnded);
       socket.off("agent_disconnected_during_chat", handleAgentDisconnectedDuringChat);
+      socket.off("system_message", handleSystemMessage);
       
       // Don't leave room on cleanup - only when explicitly disconnecting
     };

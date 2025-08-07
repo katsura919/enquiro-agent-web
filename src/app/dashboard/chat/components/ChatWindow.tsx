@@ -101,6 +101,7 @@ export default function ChatWindow({ id, name, avatar, businessId, sessionId, on
               sender={msg.senderType}
               text={msg.message}
               time={new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              systemMessageType={msg.systemMessageType}
             />
           ))
         )}

@@ -134,6 +134,16 @@ export default function ChatTabsBar() {
         }
       });
 
+      // Listen for system messages
+      socket.on("system_message", (message) => {
+        console.log("[Agent] system_message event received", message);
+        // System messages can be shown as notifications or logged for awareness
+        if (message.escalationId === escalationDetails?._id) {
+          // You can add specific handling for different system message types here
+          console.log(`[Agent] System message: ${message.message} (${message.systemMessageType})`);
+        }
+      });
+
       // Listen for agent status updates from backend
       socket.on("agent_status_update", ({ agentId: updatedAgentId, status }) => {
         console.log("[Agent] agent_status_update event received", { updatedAgentId, status });
@@ -197,6 +207,7 @@ export default function ChatTabsBar() {
         socket.off("agent_joined", handleAgentJoined);
         socket.off("customer_waiting");
         socket.off("new_message");
+        socket.off("system_message");
         socket.off("agent_status_update");
         socket.off("agent_disconnected_during_chat");
         socket.off("connect");

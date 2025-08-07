@@ -2,30 +2,63 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { User, Bot, CheckCircle2 } from "lucide-react";
+import { User, Bot, CheckCircle2, UserPlus, UserMinus, MessageCircle, PhoneOff } from "lucide-react";
 
 interface ChatMessageProps {
   sender: 'customer' | 'agent' | 'ai' | 'system';
   text: string;
   time: string;
+  systemMessageType?: string;
 }
 
-export default function ChatMessage({ sender, text, time }: ChatMessageProps) {
+export default function ChatMessage({ sender, text, time, systemMessageType }: ChatMessageProps) {
   const isAgent = sender === "agent";
   const isSystem = sender === "system";
   const isAI = sender === "ai";
+  
+  // Get system message icon based on type
+  const getSystemMessageIcon = () => {
+    switch (systemMessageType) {
+      case 'agent_joined':
+      case 'agent_assigned':
+        return <UserPlus className="w-4 h-4" />;
+      case 'agent_left':
+        return <UserMinus className="w-4 h-4" />;
+      case 'customer_joined':
+        return <User className="w-4 h-4" />;
+      case 'customer_left':
+        return <UserMinus className="w-4 h-4" />;
+      case 'chat_started':
+        return <MessageCircle className="w-4 h-4" />;
+      case 'chat_ended':
+        return <PhoneOff className="w-4 h-4" />;
+      default:
+        return "!";
+    }
+  };
+
+  // System messages should be centered
+  if (isSystem) {
+    return (
+      <div className="flex justify-center items-center my-2">
+        <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-xs text-center">
+          {text}
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className={`flex ${isAgent ? "justify-end" : "justify-start"} items-start gap-2`}>
       {!isAgent && (
         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
           isSystem 
-            ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+            ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
             : isAI
             ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
             : "bg-muted text-muted-foreground"
         }`}>
-          {isSystem ? "!" : isAI ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+          {isSystem ? getSystemMessageIcon() : isAI ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
       )}
       
@@ -33,7 +66,7 @@ export default function ChatMessage({ sender, text, time }: ChatMessageProps) {
         isAgent 
           ? "bg-primary text-primary-foreground rounded-br-sm" 
           : isSystem
-          ? "bg-orange-50 border border-orange-200 text-orange-900 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-100 rounded-bl-sm"
+          ? "bg-gray-50 border border-gray-200 text-gray-700 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 rounded-bl-sm"
           : isAI
           ? "bg-blue-50 border border-blue-200 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-100 rounded-bl-sm"
           : "bg-muted text-foreground rounded-bl-sm"
