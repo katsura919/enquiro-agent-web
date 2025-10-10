@@ -37,6 +37,7 @@ import {
   Search,
   Wrench,
   BookOpen,
+  Shield,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +54,7 @@ const tabIcons = {
   'product-search': Search,
   'service-search': Wrench,
   'faq-search': BookOpen,
+  'policy-search': Shield,
   'case-details': FileText,
   'new-tab': Plus,
 };
@@ -106,6 +108,7 @@ export function TabBar() {
     { label: 'Search Products', type: 'product-search' as const, icon: Search },
     { label: 'Search Services', type: 'service-search' as const, icon: Wrench },
     { label: 'Search FAQs', type: 'faq-search' as const, icon: BookOpen },
+    { label: 'View Policies', type: 'policy-search' as const, icon: Shield },
     { label: 'View Escalations', type: 'escalations' as const, icon: AlertTriangle },
     { label: 'Case Details', type: 'case-details' as const, icon: FileText },
   ];

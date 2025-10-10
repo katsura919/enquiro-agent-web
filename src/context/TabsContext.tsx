@@ -5,7 +5,7 @@ import { getSocket } from "@/utils/socket";
 export interface Tab {
   id: string;
   title: string;
-  type: 'overview' | 'chat' | 'escalations' | 'settings' | 'product-search' | 'service-search' | 'faq-search' | 'case-details' | 'new-tab';
+  type: 'overview' | 'chat' | 'escalations' | 'settings' | 'product-search' | 'service-search' | 'faq-search' | 'policy-search' | 'case-details' | 'new-tab';
   icon?: React.ComponentType<{ className?: string }>;
   data?: any; // Additional data for the tab (e.g., chat session info, case details)
   closeable?: boolean;

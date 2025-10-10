@@ -62,7 +62,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
       description: "Review company policies and procedures",
       icon: Shield,
       color: "from-red-500 to-red-600",
-      action: () => openTab({ title: "Policies", type: "case-details", data: { viewType: "policies" } }),
+      action: () => openTab({ title: "Policies & Guidelines", type: "policy-search" }),
     },
     {
       title: "Customer Directory",
