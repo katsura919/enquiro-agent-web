@@ -38,6 +38,7 @@ import {
   Wrench,
   BookOpen,
   Shield,
+  User,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -55,6 +56,7 @@ const tabIcons = {
   'service-search': Wrench,
   'faq-search': BookOpen,
   'policy-search': Shield,
+  'profile': User,
   'case-details': FileText,
   'new-tab': Plus,
 };

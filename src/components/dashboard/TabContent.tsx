@@ -8,6 +8,7 @@ import ViewProducts from "./tabs/ViewProductsTab";
 import ViewServices from "./tabs/ViewServicesTab";
 import ViewFAQTab from "./tabs/ViewFAQTab";
 import ViewPolicyTab from "./tabs/ViewPolicyTab";
+import ViewProfileTab from "./tabs/ViewProfileTab";
 import { CaseDetailsTab } from "./tabs/CaseDetailsTab";
 import { NewTabPage } from "./tabs/NewTabPage";
 
@@ -43,6 +44,8 @@ export function TabContent() {
         return <ViewFAQTab />;
       case 'policy-search':
         return <ViewPolicyTab />;
+      case 'profile':
+        return <ViewProfileTab />;
       case 'case-details':
         return <CaseDetailsTab tab={tab} />;
       case 'new-tab':

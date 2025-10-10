@@ -275,9 +275,15 @@ export default function AgentToolsBar() {
 
         {/* Right side - Agent info and tools */}
         <div className="flex items-center gap-4">
-          <div className="text-xs text-muted-foreground">
-            {user?.name} • ID: {agentId}
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openTab({ title: "My Profile", type: "profile" })}
+            className="flex items-center gap-2"
+          >
+            <User className="w-4 h-4" />
+            <span className="text-sm">{user?.name}</span>
+          </Button>
           
         </div>
       </div>

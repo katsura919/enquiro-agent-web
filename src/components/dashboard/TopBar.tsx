@@ -160,7 +160,7 @@ export function TopBar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => openTab({ title: 'Profile', type: 'settings' })}
+                onClick={() => openTab({ title: 'Profile', type: 'profile' })}
               >
                 <User className="mr-2 h-4 w-4" />
                 Profile
