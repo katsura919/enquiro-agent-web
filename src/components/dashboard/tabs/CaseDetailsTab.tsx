@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTabs } from "@/context/TabsContext";
+import { useAuth } from "@/lib/auth";
 import {
   FileText,
   User,
@@ -16,6 +17,7 @@ import {
   CheckCircle,
   XCircle,
   ArrowLeft,
+  Check,
 } from "lucide-react";
 import api from "@/utils/api";
 import type { ChatMessage } from "@/types/ChatMessage";
@@ -23,11 +25,16 @@ import type { ChatMessage } from "@/types/ChatMessage";
 // Import the existing escalation components
 import {
   ActivityFeed,
-  CaseNotes,
-  CommunicationTabs,
   CustomerIssueCard,
 } from "@/app/dashboard/escalations/[id]/components";
+import { CaseNotesPreview } from "@/app/dashboard/escalations/[id]/components/CaseNotesPreview";
+import { ConversationHistory } from "@/app/dashboard/escalations/[id]/components/ConversationHistory";
+import { EmailThread } from "@/app/dashboard/escalations/[id]/components/EmailThread";
 import { EscalationHeader } from "@/app/dashboard/escalations/[id]/components/EscalationHeader";
+
+// Import types from our component files
+import type { CaseNote } from '@/app/dashboard/escalations/[id]/components/CaseNotes'
+import type { ActivityItem as Activity } from '@/app/dashboard/escalations/[id]/components/ActivityFeed'
 
 interface CaseDetailsTabProps {
   tab: Tab;
@@ -44,7 +51,12 @@ interface Escalation {
   concern: string;
   description?: string;
   status: "escalated" | "pending" | "resolved";
-  assignedTo?: string;
+  caseOwner?: {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
   emailThreadId?: string;
   createdAt: string;
   updatedAt: string;
@@ -78,22 +90,21 @@ interface EmailMessage {
   isRead?: boolean;
 }
 
-interface CaseNote {
-  id: string;
-  content: string;
-  author: string;
-  createdAt: string;
-}
+const statusIcons = {
+  escalated: AlertTriangle,
+  pending: Clock,
+  resolved: Check
+};
 
-interface Activity {
-  id: string;
-  action: string;
-  timestamp: string;
-  details?: string;
-}
+const statusColors = {
+  escalated: "text-orange-400",
+  pending: "text-yellow-400",
+  resolved: "text-green-400"
+};
 
 // Wrapper component for escalation details that doesn't rely on Next.js params
 function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
+  const { user } = useAuth();
   const [escalation, setEscalation] = useState<Escalation | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
@@ -103,21 +114,11 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingEmails, setRefreshingEmails] = useState(false);
   const [caseNotes, setCaseNotes] = useState<CaseNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   const [copiedCaseNumber, setCopiedCaseNumber] = useState(false);
   const [copiedSessionId, setCopiedSessionId] = useState(false);
-
-  const statusColors = {
-    escalated: "text-red-400",
-    pending: "text-yellow-400", 
-    resolved: "text-green-400"
-  };
-
-  const statusIcons = {
-    escalated: AlertTriangle,
-    pending: Clock,
-    resolved: CheckCircle
-  };
 
   useEffect(() => {
     if (!escalationId) return;
@@ -171,19 +172,146 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
   };
 
   const fetchNotes = async () => {
+    if (!escalationId) return;
+    setLoadingNotes(true);
     try {
       const response = await api.get(`/notes/escalation/${escalationId}`);
-      // Transform the response to match the expected CaseNote interface
-      const transformedNotes = response.data.map((note: any) => ({
-        id: note._id,
-        content: note.content,
-        author: note.author || "Agent", // Default to "Agent" if no author specified
-        createdAt: note.createdAt
-      }));
-      setCaseNotes(transformedNotes);
+      if (response.data.success && response.data.data?.notes) {
+        // Map backend notes to CaseNote interface
+        const notes = response.data.data.notes.map((note: any) => ({
+          id: note._id,
+          content: note.content,
+          author: note.createdBy || "Unknown User",
+          createdAt: note.createdAt
+        }));
+        setCaseNotes(notes);
+      } else {
+        setCaseNotes([]);
+      }
     } catch (error) {
       console.error('Error fetching notes:', error);
       setCaseNotes([]);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  const addCaseNote = async (content: string) => {
+    if (!content.trim()) return;
+    try {
+      // Get user name from auth context
+      const createdBy = user?.name || 'Unknown User';
+
+      const response = await api.post(`/notes/escalation/${escalationId}`, { 
+        content,
+        createdBy 
+      });
+      console.log('Add note response:', response);
+      if (response.data.success && response.data.data) {
+        fetchNotes();
+        const newActivity: Activity = {
+          id: `act-${Date.now()}`,
+          action: "Note Added",
+          timestamp: new Date().toISOString()
+        };
+        setActivities([newActivity, ...activities]);
+      } else {
+        alert('Failed to create note.');
+      }
+    } catch (error) {
+      alert('Error adding note.');
+      console.error('Error adding note:', error);
+    }
+  };
+
+  const deleteNote = async (noteId: string) => {
+    try {
+      const response = await api.delete(`/notes/${noteId}`);
+      if (response.data.success) {
+        fetchNotes();
+        const newActivity: Activity = {
+          id: `act-${Date.now()}`,
+          action: "Note Deleted",
+          timestamp: new Date().toISOString()
+        };
+        setActivities([newActivity, ...activities]);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
+  };
+
+  const handleCaseOwnerChange = async (agentId: string) => {
+    if (!escalation) return;
+    
+    console.log('Updating case owner:', { escalationId: escalation._id, agentId });
+    
+    try {
+      const response = await api.patch(`/escalation/${escalation._id}/case-owner`, { 
+        caseOwner: agentId || null 
+      });
+      
+      console.log('Case owner update response:', response.data);
+      
+      if (response.data.success) {
+        const updatedEscalationData = response.data.data;
+        
+        setEscalation(prev => prev ? {
+          ...prev,
+          caseOwner: updatedEscalationData.caseOwner || undefined
+        } : null);
+        
+        const newActivity: Activity = {
+          id: `act-${Date.now()}`,
+          action: agentId ? "Case Owner Assigned" : "Case Owner Unassigned",
+          timestamp: new Date().toISOString(),
+          details: updatedEscalationData.caseOwner 
+            ? `Assigned to ${updatedEscalationData.caseOwner.name}` 
+            : "Case unassigned"
+        };
+        setActivities([newActivity, ...activities]);
+        
+        console.log('Case owner updated successfully', updatedEscalationData.caseOwner);
+      } else {
+        console.error('Case owner update failed:', response.data);
+      }
+    } catch (error) {
+      console.error('Error updating case owner:', error);
+      alert('Failed to update case owner. Please try again.');
+      throw error;
+    }
+  };
+
+  const handleCustomerIssueUpdate = async (updatedData: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    concern: string;
+    description?: string;
+  }) => {
+    if (!escalation) return;
+    
+    try {
+      const response = await api.patch(`/escalation/${escalation._id}`, updatedData);
+      
+      if (response.data) {
+        setEscalation(prev => prev ? { 
+          ...prev, 
+          ...updatedData,
+          updatedAt: new Date().toISOString()
+        } : null);
+        
+        const newActivity: Activity = {
+          id: `act-${Date.now()}`,
+          action: "Customer Details Updated",
+          timestamp: new Date().toISOString(),
+          details: "Customer information has been updated"
+        };
+        setActivities([newActivity, ...activities]);
+      }
+    } catch (error) {
+      console.error('Error updating customer issue:', error);
+      throw error;
     }
   };
 
@@ -315,43 +443,6 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
     }
   };
 
-  const addCaseNote = async (noteText: string) => {
-    try {
-      const response = await api.post('/notes', {
-        escalationId: escalationId,
-        content: noteText
-      });
-      if (response.data.success) {
-        fetchNotes();
-        const newActivity: Activity = {
-          id: `act-${Date.now()}`,
-          action: "Note Added",
-          timestamp: new Date().toISOString()
-        };
-        setActivities([newActivity, ...activities]);
-      }
-    } catch (error) {
-      console.error('Error adding note:', error);
-    }
-  };
-
-  const deleteNote = async (noteId: string) => {
-    try {
-      const response = await api.delete(`/notes/${noteId}`);
-      if (response.data.success) {
-        fetchNotes();
-        const newActivity: Activity = {
-          id: `act-${Date.now()}`,
-          action: "Note Deleted",
-          timestamp: new Date().toISOString()
-        };
-        setActivities([newActivity, ...activities]);
-      }
-    } catch (error) {
-      console.error('Error deleting note:', error);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
@@ -401,6 +492,7 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
           caseNumber: escalation.caseNumber,
           sessionId: escalation.sessionId,
           status: escalation.status,
+          caseOwner: escalation.caseOwner,
         }}
         statusColors={statusColors}
         StatusIcon={StatusIcon}
@@ -409,6 +501,9 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
         setCopiedCaseNumber={setCopiedCaseNumber}
         setCopiedSessionId={setCopiedSessionId}
         handleStatusChange={handleStatusChange}
+        handleCaseOwnerChange={handleCaseOwnerChange}
+        businessId={escalation.businessId}
+        currentOwnerName={escalation.caseOwner?.name}
       />
       
       <div className="flex-1 overflow-y-auto">
@@ -421,34 +516,42 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
               concern={escalation.concern}
               description={escalation.description}
               status={escalation.status}
+              escalationId={escalation._id}
+              onUpdate={handleCustomerIssueUpdate}
             />
 
-            <CommunicationTabs
+            <ConversationHistory
               chatMessages={chatMessages}
               loadingChats={loadingChats}
-              refreshingChats={refreshing}
+              refreshing={refreshing}
               handleRefreshChats={handleRefreshChats}
+              formatTime={formatTime}
+            />
+
+            <EmailThread
               emails={emails}
-              loadingEmails={loadingEmails}
-              refreshingEmails={refreshingEmails}
-              handleRefreshEmails={handleRefreshEmails}
-              onSendEmailReply={handleSendEmailReply}
+              loading={loadingEmails}
+              refreshing={refreshingEmails}
+              onRefresh={handleRefreshEmails}
+              onSendReply={handleSendEmailReply}
               onSendNewEmail={handleSendNewEmail}
               formatTime={formatTime}
               formatEmailDate={formatEmailDate}
               customerEmail={escalation.customerEmail}
               customerName={escalation.customerName}
               concernSubject={escalation.concern}
+              userEmail={user?.email || "support@example.com"}
             />
           </div>
 
-          <div className="lg:border-l lg:border-border/40">
+          <div className="lg:border-l lg:border-border-muted-gray">
             <div className="p-0 lg:p-4 space-y-6 md:space-y-8">
-              <CaseNotes 
+              <CaseNotesPreview 
                 notes={caseNotes}
                 onAddNote={addCaseNote}
                 onDeleteNote={deleteNote}
                 formatDate={formatDate}
+                maxDisplay={3}
               />            
               <ActivityFeed 
                 activities={activities}
