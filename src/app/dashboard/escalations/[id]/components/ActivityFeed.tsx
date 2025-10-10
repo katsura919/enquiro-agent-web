@@ -27,7 +27,7 @@ export function ActivityFeed({ activities, formatDate }: ActivityFeedProps) {
         </div>
       </div>
       
-      <Card className="bg-card p-4 overflow-hidden shadow-sm border-border/40">
+      <Card className="bg-card p-4 overflow-hidden shadow-none border-muted-gray">
         <div className="relative">
           {activities.length === 0 ? (
             <div className="p-8 text-center">

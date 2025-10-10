@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ComposeEmail } from "./ComposeEmail";
 import { AttachmentPreviewModal } from "./AttachmentPreviewModal";
-import { formatSenderName, formatEmailDate, sanitizeHTML, cleanHtmlEntities } from "./emailUtils";
+import { formatSenderName, formatEmailDate, sanitizeHTML, cleanHtmlEntities, parseEmailContent } from "./emailUtils";
 import "./email-content.css";
 
 interface EmailMessage {
@@ -353,7 +353,7 @@ export function EmailThread({
         </Button>
       </div>
 
-      <Card className="bg-card overflow-hidden">
+      <Card className="bg-card overflow-hidden border-muted-gray shadow-none">
         <ScrollArea className="h-[650px]">
           {emails.length === 0 ? (
             <div className="p-4">
@@ -563,19 +563,76 @@ export function EmailThread({
                         {/* Main email content */}
                         <div className="w-full overflow-hidden">
                           {email.body ? (
-                            // Use backend-parsed content
-                            <div className="prose prose-sm max-w-none">
-                              {email.isHTML ? (
-                                <div 
-                                  className="email-content text-sm leading-relaxed break-words overflow-hidden"
-                                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(email.body) }}
-                                />
-                              ) : (
-                                <div className="whitespace-pre-wrap text-sm leading-relaxed break-words overflow-hidden">
-                                  {email.body}
+                            (() => {
+                              // Parse the email content to separate main content from quoted content
+                              const parsedContent = parseEmailContent(email.body);
+                              
+                              return (
+                                <div className="prose prose-sm max-w-none">
+                                  {parsedContent.isHTML ? (
+                                    <div 
+                                      className="email-content text-sm leading-relaxed break-words overflow-hidden"
+                                      dangerouslySetInnerHTML={{ 
+                                        __html: sanitizeHTML(parsedContent.mainContent) 
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="whitespace-pre-wrap text-sm leading-relaxed break-words overflow-hidden">
+                                      {cleanHtmlEntities(parsedContent.mainContent)}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Show quoted content if it exists */}
+                                  {parsedContent.quotedContent && (
+                                    <div className="mt-4">
+                                      <button
+                                        onClick={() => {
+                                          setExpandedQuotedText(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(email.id)) {
+                                              newSet.delete(email.id);
+                                            } else {
+                                              newSet.add(email.id);
+                                            }
+                                            return newSet;
+                                          });
+                                        }}
+                                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors quoted-text-toggle"
+                                      >
+                                        {expandedQuotedText.has(email.id) ? (
+                                          <>
+                                            <ChevronUp className="h-3 w-3" />
+                                            Hide quoted text
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="h-3 w-3" />
+                                            Show quoted text
+                                          </>
+                                        )}
+                                      </button>
+                                      
+                                      {expandedQuotedText.has(email.id) && (
+                                        <div className="mt-2 pl-4 border-l-2 border-gray-300 quoted-text-content">
+                                          {parsedContent.isHTML ? (
+                                            <div 
+                                              className="email-content text-xs text-muted-foreground"
+                                              dangerouslySetInnerHTML={{ 
+                                                __html: sanitizeHTML(parsedContent.quotedContent) 
+                                              }}
+                                            />
+                                          ) : (
+                                            <div className="whitespace-pre-wrap text-xs text-muted-foreground">
+                                              {cleanHtmlEntities(parsedContent.quotedContent)}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              );
+                            })()
                           ) : (
                             // Fallback to snippet parsing for older emails
                             (() => {

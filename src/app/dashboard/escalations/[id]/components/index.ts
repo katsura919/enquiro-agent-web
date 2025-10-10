@@ -6,6 +6,8 @@ export { EmailThread } from './EmailThread';
 export { ComposeEmail } from './ComposeEmail';
 export { CommunicationTabs } from './CommunicationTabs';
 export { CaseNotes } from './CaseNotes';
+export { CaseNotesPreview } from './CaseNotesPreview';
 export { ActivityFeed } from './ActivityFeed';
 export { ViewAllActivities } from './ViewAllActivities';
 export { Timeline } from './Timeline';
+export { CaseOwnerCombobox } from './CaseOwnerCombobox';

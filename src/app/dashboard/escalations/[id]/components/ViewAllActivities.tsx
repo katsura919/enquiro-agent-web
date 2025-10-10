@@ -41,10 +41,11 @@ export function ViewAllActivities({ activities, formatDate }: ViewAllActivitiesP
             </DrawerClose>
           </div>
           <DrawerDescription>Complete activity history for this case.</DrawerDescription>
-        </DrawerHeader>        <ScrollArea className="h-[calc(100vh-7rem)]">
+        </DrawerHeader>        
+        <ScrollArea className="h-[calc(100vh-7rem)]">
           <div className="space-y-6 p-4 pb-6">
             {activities.map((activity) => (
-              <div key={activity.id} className="flex gap-4 items-start border-b pb-4 border-border/30 last:border-0 pl-1">
+              <div key={activity.id} className="flex gap-4 items-start border-b pb-4 border-gray-300 dark:border-border/30 last:border-0 pl-1">
                 <div className="h-7 w-7 rounded-full bg-blue-500 flex items-center justify-center z-10 flex-shrink-0">
                   {activity.action.includes("Status") ? (
                     <RefreshCw className="h-3.5 w-3.5 text-white" />

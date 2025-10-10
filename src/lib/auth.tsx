@@ -6,10 +6,15 @@ import api from '../utils/api';
 
 interface User {
   _id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   businessId: string;
+  role: string;
+  phone: string;
+  profilePic: string;
+  createdAt: string;
+  deletedAt: string | null;
+  __v: number;
 }
 
 interface AuthContextType {
@@ -23,23 +28,40 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  
+  useEffect(() => {
+    console.log("=== AUTH CONTEXT DEBUG ===");
+    console.log("Current User State:", user);
+    console.log("Current Loading State:", isLoading);
+    console.log("========================");
+  }, [user, isLoading]);
+  
   useEffect(() => {
     // Check for stored token and fetch user info
     const token = localStorage.getItem('token');
     if (token) {
+      console.log("Token found, fetching user info...");
       api.get('/agent/info')
         .then(res => {
-          setUser(res.data);
+          console.log("API Response from /agent/info:", res.data);
+          // Convert ObjectId to string if needed
+          const userData = {
+            ...res.data,
+            businessId: res.data.businessId?.toString() || res.data.businessId
+          };
+          console.log("Processed user data:", userData);
+          setUser(userData);
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Error fetching user info:", err);
           setUser(null);
           localStorage.removeItem('token');
         })
         .finally(() => setIsLoading(false));
     } else {
+      console.log("No token found");
       setIsLoading(false);
     }
   }, []);
@@ -56,7 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userRes = await api.get('/agent/info', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUser(userRes.data);
+      // Convert ObjectId to string if needed
+      const userData = {
+        ...userRes.data,
+        businessId: userRes.data.businessId?.toString() || userRes.data.businessId
+      };
+      setUser(userData);
       router.push('/dashboard'); 
     } catch (error: any) {
       throw new Error(error.response?.data?.message || error.message || 'Login failed');

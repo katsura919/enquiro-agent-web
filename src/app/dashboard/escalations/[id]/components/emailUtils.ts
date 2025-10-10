@@ -76,10 +76,12 @@ function extractMainContent(htmlBody: string) {
     }
   }
   
-  // Clean up the content
+  // Clean up the content more thoroughly
   content = content
-    .replace(/<div[^>]*class="gmail_attr"[^>]*>[\s\S]*?<\/div>/gi, '')
-    .replace(/^\s*<div[^>]*>\s*$|^\s*<\/div>\s*$/gm, '')
+    .replace(/<div[^>]*class="gmail_attr"[^>]*>[\s\S]*?<\/div>/gi, '') // Remove Gmail attribution
+    .replace(/^\s*<div[^>]*>\s*$|^\s*<\/div>\s*$/gm, '') // Remove empty divs
+    .replace(/<br\s*\/?\s*>$/gi, '') // Remove trailing breaks
+    .replace(/^<div[^>]*>|<\/div>$/gi, '') // Remove wrapping div if it's the only one
     .trim();
   
   return content;
@@ -122,8 +124,16 @@ function cleanHTML(html: string) {
     .replace(/(<br\s*\/?>[\s\n]*){3,}/gi, '<br><br>') // Limit consecutive breaks
     .trim();
   
-  // Add some basic Gmail-style formatting
-  cleaned = cleaned.replace(/<div>/gi, '<div style="margin: 0;">');
+  // Clean up Gmail-specific classes and styles while preserving basic structure
+  cleaned = cleaned
+    .replace(/class="gmail_[^"]*"/gi, '') // Remove gmail_ classes
+    .replace(/style="[^"]*"/gi, '') // Remove inline styles
+    .replace(/<div[^>]*>/gi, '<div>') // Clean div attributes
+    .replace(/<span[^>]*>/gi, '<span>') // Clean span attributes
+    .replace(/dir="[^"]*"/gi, '') // Remove dir attributes
+    .replace(/\s+>/g, '>') // Clean up extra spaces before closing brackets
+    .replace(/<div>\s*<\/div>/gi, '') // Remove empty divs
+    .replace(/<span>\s*<\/span>/gi, ''); // Remove empty spans
   
   return cleaned;
 }
@@ -131,13 +141,24 @@ function cleanHTML(html: string) {
 // Add a function to sanitize HTML for safe rendering
 export function sanitizeHTML(html: string) {
   // Basic HTML sanitization - remove potentially dangerous elements
-  return html
+  let sanitized = html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
     .replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '')
     .replace(/<embed[^>]*>[\s\S]*?<\/embed>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '') // Remove event handlers
     .replace(/javascript:/gi, ''); // Remove javascript: URLs
+  
+  // Clean Gmail-specific attributes and classes that might interfere with styling
+  sanitized = sanitized
+    .replace(/class="gmail_[^"]*"/gi, '') // Remove Gmail classes
+    .replace(/style="[^"]*"/gi, '') // Remove inline styles that might conflict
+    .replace(/dir="[^"]*"/gi, '') // Remove direction attributes
+    .replace(/\s+>/g, '>') // Clean up spaces before closing brackets
+    .replace(/<div>\s*<\/div>/gi, '') // Remove empty divs
+    .replace(/<span>\s*<\/span>/gi, ''); // Remove empty spans
+  
+  return sanitized;
 }
 
 export function formatSenderName(from: string) {
