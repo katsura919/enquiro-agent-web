@@ -57,7 +57,7 @@ export function NewTabPage({ tab }: NewTabPageProps) {
       description: "Access frequently asked questions and guides",
       icon: HelpCircle,
       color: "from-orange-500 to-orange-600",
-      action: () => openTab({ title: "FAQ & Knowledge", type: "case-details", data: { viewType: "faq" } }),
+      action: () => openTab({ title: "FAQ Knowledge Base", type: "faq-search" }),
     },
     {
       title: "Policies & Guidelines",
