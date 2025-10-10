@@ -34,7 +34,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
       description: "Browse and manage all customer cases",
       icon: FileText,
       color: "from-blue-500 to-blue-600",
-      action: () => openTab({ title: "All Cases", type: "case-details", data: { viewType: "all-cases" } }),
+      action: () => openTab({ title: "Escalations", type: "escalations" }),
     },
     {
       title: "View All Products",

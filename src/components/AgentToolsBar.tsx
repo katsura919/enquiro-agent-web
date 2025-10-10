@@ -276,7 +276,7 @@ export default function AgentToolsBar() {
         {/* Right side - Agent info and tools */}
         <div className="flex items-center gap-4">
           <div className="text-xs text-muted-foreground">
-            {user?.firstName} {user?.lastName} • ID: {agentId}
+            {user?.name} • ID: {agentId}
           </div>
           
         </div>

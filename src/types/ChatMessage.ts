@@ -3,7 +3,7 @@ export interface ChatMessage {
   businessId: string;
   sessionId: string;
   message?: string; // Make message optional since we can have attachment-only messages
-  messageType?: 'text' | 'file'; // Add message type
+  messageType?: 'text' | 'image' | 'file'; // Add message type
   attachments?: Array<{ // Add attachments support
     fileUrl: string;
     fileName: string;

@@ -7,6 +7,8 @@ import api from '../utils/api';
 interface User {
   _id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   businessId: string;
   role: string;

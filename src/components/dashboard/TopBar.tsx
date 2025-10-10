@@ -137,13 +137,13 @@ export function TopBar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 px-2 flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src="" alt={`${user?.firstName} ${user?.lastName}` || "Agent"} />
+                  <AvatarImage src="" alt={user?.name || "Agent"} />
                   <AvatarFallback className="text-xs">
-                    {user?.firstName?.charAt(0) || "A"}
+                    {user?.name?.charAt(0) || "A"}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium hidden sm:block">
-                  {user ? `${user.firstName} ${user.lastName}` : "Agent"}
+                  {user?.name || "Agent"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -151,7 +151,7 @@ export function TopBar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {user ? `${user.firstName} ${user.lastName}` : "Agent"}
+                    {user?.name || "Agent"}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email || "agent@enquiro.com"}

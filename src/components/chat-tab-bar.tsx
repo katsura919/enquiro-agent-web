@@ -427,7 +427,7 @@ export default function ChatTabsBar() {
           {/* Agent Info */}
           <div className="pt-2 border-t border-border">
             <div className="text-xs text-muted-foreground space-y-1">
-              <div>Agent: {user?.firstName} {user?.lastName}</div>
+              <div>Agent: {user?.name}</div>
               <div>ID: {agentId}</div>
               <div>Business: {businessId}</div>
             </div>
