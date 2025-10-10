@@ -48,7 +48,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
       description: "Manage and review service offerings",
       icon: Wrench,
       color: "from-purple-500 to-purple-600",
-      action: () => openTab({ title: "All Services", type: "case-details", data: { viewType: "all-services" } }),
+      action: () => openTab({ title: "Service Catalog", type: "service-search" }),
     },
     {
       title: "FAQ & Knowledge Base",

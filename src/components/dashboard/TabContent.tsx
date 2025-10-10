@@ -4,7 +4,8 @@ import { OverviewTab } from "./tabs/OverviewTab";
 import { ChatTab } from "./tabs/ChatTab";
 import { EscalationsTab } from "./tabs/EscalationsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
-import { ProductSearchTab } from "./tabs/ProductSearchTab";
+import ViewProducts from "./tabs/ViewProductsTab";
+import ViewServices from "./tabs/ViewServicesTab";
 import { CaseDetailsTab } from "./tabs/CaseDetailsTab";
 import { NewTabPage } from "./tabs/NewTabPage";
 
@@ -33,7 +34,9 @@ export function TabContent() {
       case 'settings':
         return <SettingsTab tab={tab} />;
       case 'product-search':
-        return <ProductSearchTab tab={tab} />;
+        return <ViewProducts />;
+      case 'service-search':
+        return <ViewServices />;
       case 'case-details':
         return <CaseDetailsTab tab={tab} />;
       case 'new-tab':

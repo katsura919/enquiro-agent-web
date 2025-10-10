@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   Settings,
   Search,
+  Wrench,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -49,6 +50,7 @@ const tabIcons = {
   escalations: AlertTriangle,
   settings: Settings,
   'product-search': Search,
+  'service-search': Wrench,
   'case-details': FileText,
   'new-tab': Plus,
 };
@@ -100,6 +102,7 @@ export function TabBar() {
   const quickActions = [
     { label: 'New Chat Session', type: 'chat' as const, icon: MessageSquare },
     { label: 'Search Products', type: 'product-search' as const, icon: Search },
+    { label: 'Search Services', type: 'service-search' as const, icon: Wrench },
     { label: 'View Escalations', type: 'escalations' as const, icon: AlertTriangle },
     { label: 'Case Details', type: 'case-details' as const, icon: FileText },
   ];
