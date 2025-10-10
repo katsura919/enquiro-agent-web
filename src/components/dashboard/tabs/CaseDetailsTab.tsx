@@ -26,15 +26,15 @@ import type { ChatMessage } from "@/types/ChatMessage";
 import {
   ActivityFeed,
   CustomerIssueCard,
-} from "@/app/dashboard/escalations/[id]/components";
-import { CaseNotesPreview } from "@/app/dashboard/escalations/[id]/components/CaseNotesPreview";
-import { ConversationHistory } from "@/app/dashboard/escalations/[id]/components/ConversationHistory";
-import { EmailThread } from "@/app/dashboard/escalations/[id]/components/EmailThread";
-import { EscalationHeader } from "@/app/dashboard/escalations/[id]/components/EscalationHeader";
+} from "@/components/case-details";
+import { CaseNotesPreview } from "@/components/case-details/CaseNotesPreview";
+import { ConversationHistory } from "@/components/case-details/ConversationHistory";
+import { EmailThread } from "@/components/case-details/EmailThread";
+import { EscalationHeader } from "@/components/case-details/EscalationHeader";
 
 // Import types from our component files
-import type { CaseNote } from '@/app/dashboard/escalations/[id]/components/CaseNotes'
-import type { ActivityItem as Activity } from '@/app/dashboard/escalations/[id]/components/ActivityFeed'
+import type { CaseNote } from '@/components/case-details/CaseNotes'
+import type { ActivityItem as Activity } from '@/components/case-details/ActivityFeed'
 
 interface CaseDetailsTabProps {
   tab: Tab;

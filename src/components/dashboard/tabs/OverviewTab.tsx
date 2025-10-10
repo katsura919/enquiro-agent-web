@@ -4,17 +4,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useTabs } from "@/context/TabsContext";
 import {
-  MessageSquare,
-  AlertTriangle,
   Search,
   FileText,
-  TrendingUp,
-  Clock,
+  Package,
+  Wrench,
+  HelpCircle,
+  Shield,
+  MessageSquare,
+  AlertTriangle,
   Users,
-  CheckCircle,
+  BarChart3,
+  Clock,
+  Star,
+  BookOpen,
+  Settings,
+  Zap,
 } from "lucide-react";
-import { TabContextMenuDemo } from "../TabContextMenuDemo";
-import { TabFeaturesDemo } from "../TabFeaturesDemo";
 
 interface OverviewTabProps {
   tab: Tab;
@@ -22,21 +27,53 @@ interface OverviewTabProps {
 
 export function OverviewTab({ tab }: OverviewTabProps) {
   const { openTab } = useTabs();
-  
-  // Show refresh indicator if tab was recently refreshed
-  const refreshKey = tab.data?.refreshKey;
-  const lastRefresh = tab.data?.lastRefresh;
-  const now = Date.now();
-  const wasRecentlyRefreshed = lastRefresh && (now - lastRefresh) < 2000; // 2 seconds
-
-  const stats = [
-    { label: "Active Chats", value: "12", icon: MessageSquare, color: "text-blue-600" },
-    { label: "Pending Cases", value: "8", icon: Clock, color: "text-orange-600" },
-    { label: "Escalations", value: "3", icon: AlertTriangle, color: "text-red-600" },
-    { label: "Resolved Today", value: "24", icon: CheckCircle, color: "text-green-600" },
-  ];
 
   const quickActions = [
+    {
+      title: "View All Cases",
+      description: "Browse and manage all customer cases",
+      icon: FileText,
+      color: "from-blue-500 to-blue-600",
+      action: () => openTab({ title: "All Cases", type: "case-details", data: { viewType: "all-cases" } }),
+    },
+    {
+      title: "View All Products",
+      description: "Search and explore product catalog",
+      icon: Package,
+      color: "from-green-500 to-green-600",
+      action: () => openTab({ title: "Product Catalog", type: "product-search" }),
+    },
+    {
+      title: "View All Services",
+      description: "Manage and review service offerings",
+      icon: Wrench,
+      color: "from-purple-500 to-purple-600",
+      action: () => openTab({ title: "All Services", type: "case-details", data: { viewType: "all-services" } }),
+    },
+    {
+      title: "FAQ & Knowledge Base",
+      description: "Access frequently asked questions and guides",
+      icon: HelpCircle,
+      color: "from-orange-500 to-orange-600",
+      action: () => openTab({ title: "FAQ & Knowledge", type: "case-details", data: { viewType: "faq" } }),
+    },
+    {
+      title: "Policies & Guidelines",
+      description: "Review company policies and procedures",
+      icon: Shield,
+      color: "from-red-500 to-red-600",
+      action: () => openTab({ title: "Policies", type: "case-details", data: { viewType: "policies" } }),
+    },
+    {
+      title: "Customer Directory",
+      description: "Search and manage customer information",
+      icon: Users,
+      color: "from-indigo-500 to-indigo-600",
+      action: () => openTab({ title: "Customers", type: "case-details", data: { viewType: "customers" } }),
+    },
+  ];
+
+  const recentActions = [
     {
       title: "Start New Chat",
       description: "Begin a new customer conversation",
@@ -44,148 +81,188 @@ export function OverviewTab({ tab }: OverviewTabProps) {
       action: () => openTab({ title: "New Chat Session", type: "chat" }),
     },
     {
-      title: "Search Products",
-      description: "Find product information quickly",
-      icon: Search,
-      action: () => openTab({ title: "Product Search", type: "product-search" }),
-    },
-    {
       title: "View Escalations",
-      description: "Manage escalated cases",
+      description: "Check urgent cases requiring attention",
       icon: AlertTriangle,
       action: () => openTab({ title: "Escalations", type: "escalations" }),
     },
     {
-      title: "Case Details",
-      description: "Open a specific case",
-      icon: FileText,
-      action: () => openTab({ title: "Case Details", type: "case-details" }),
+      title: "Analytics Dashboard",
+      description: "View performance metrics and reports",
+      icon: BarChart3,
+      action: () => openTab({ title: "Analytics", type: "case-details", data: { viewType: "analytics" } }),
+    },
+    {
+      title: "Recent Activity",
+      description: "View your recent actions and updates",
+      icon: Clock,
+      action: () => openTab({ title: "Activity Log", type: "case-details", data: { viewType: "activity" } }),
     },
   ];
 
-  const recentActivity = [
-    { id: 1, action: "Resolved case #12345", time: "2 minutes ago" },
-    { id: 2, action: "Escalated case #12344", time: "15 minutes ago" },
-    { id: 3, action: "Started chat with John Doe", time: "1 hour ago" },
-    { id: 4, action: "Updated product information", time: "2 hours ago" },
+  const featuredTools = [
+    {
+      title: "Quick Search",
+      description: "Search across all resources",
+      icon: Search,
+      action: () => {
+        // Focus on the global search in top bar
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        searchInput?.focus();
+      },
+    },
+    {
+      title: "Bookmarks",
+      description: "Access your saved items",
+      icon: Star,
+      action: () => openTab({ title: "Bookmarks", type: "case-details", data: { viewType: "bookmarks" } }),
+    },
+    {
+      title: "Training Materials",
+      description: "Access learning resources",
+      icon: BookOpen,
+      action: () => openTab({ title: "Training", type: "case-details", data: { viewType: "training" } }),
+    },
+    {
+      title: "Settings",
+      description: "Customize your workspace",
+      icon: Settings,
+      action: () => openTab({ title: "Settings", type: "settings" }),
+    },
   ];
 
   return (
     <div className="flex-1 overflow-auto p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Agent Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Here's an overview of your current workload.
-            </p>
-          </div>
-          {wasRecentlyRefreshed && (
-            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
-              <CheckCircle className="w-4 h-4" />
-              Tab refreshed
-            </div>
-          )}
-        </div>
+      <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => {
-            const IconComponent = stat.icon;
-            return (
-              <Card key={stat.label}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {stat.label}
-                      </p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
-                    </div>
-                    <IconComponent className={`w-8 h-8 ${stat.color}`} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>
-                Common tasks to help you get started quickly
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {quickActions.map((action) => {
-                const IconComponent = action.icon;
-                return (
-                  <Button
-                    key={action.title}
-                    variant="outline"
-                    className="w-full justify-start h-auto p-4"
-                    onClick={action.action}
-                  >
-                    <div className="flex items-center gap-3">
-                      <IconComponent className="w-5 h-5 text-primary" />
-                      <div className="text-left">
-                        <div className="font-medium">{action.title}</div>
-                        <div className="text-sm text-muted-foreground">
+        {/* Main Actions Grid */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quickActions.map((action) => {
+              const IconComponent = action.icon;
+              return (
+                <Card
+                  key={action.title}
+                  className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group border-0 bg-gradient-to-br from-background to-background/50 backdrop-blur-sm"
+                  onClick={action.action}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                        <IconComponent className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+                          {action.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {action.description}
-                        </div>
+                        </p>
                       </div>
                     </div>
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>
-                Your latest actions and updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                  >
-                    <div className="font-medium text-sm">{activity.action}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {activity.time}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tab Context Menu Demo */}
-          <div>
-            <TabContextMenuDemo />
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
-        {/* Tab Features Demo - Full width */}
-        <div className="w-full flex justify-center">
-          <TabFeaturesDemo />
+        {/* Secondary Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent & Frequent */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Recent & Frequent</h3>
+            <div className="space-y-3">
+              {recentActions.map((action) => {
+                const IconComponent = action.icon;
+                return (
+                  <Card
+                    key={action.title}
+                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    onClick={action.action}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <IconComponent className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium group-hover:text-primary transition-colors">
+                            {action.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {action.description}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Tools & Utilities */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Tools & Utilities</h3>
+            <div className="space-y-3">
+              {featuredTools.map((tool) => {
+                const IconComponent = tool.icon;
+                return (
+                  <Card
+                    key={tool.title}
+                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    onClick={tool.action}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                          <IconComponent className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium group-hover:text-primary transition-colors">
+                            {tool.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {tool.description}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
+
+        {/* Quick Tips */}
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Star className="w-5 h-5" />
+              Pro Tips
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm">
+              • Use <kbd className="px-2 py-1 text-xs bg-muted rounded">Ctrl+T</kbd> to quickly open a new tab
+            </p>
+            <p className="text-sm">
+              • Right-click on tabs for additional options
+            </p>
+            <p className="text-sm">
+              • Use the global search at the top to find anything quickly
+            </p>
+            <p className="text-sm">
+              • Pin frequently used tabs for easy access
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

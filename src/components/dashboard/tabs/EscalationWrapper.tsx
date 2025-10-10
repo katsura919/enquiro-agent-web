@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { EscalationTable, Escalation } from "@/app/dashboard/escalations/components/EscalationTable";
-import { EscalationCountCards } from "@/app/dashboard/escalations/components/EscalationCountCards";
+import { EscalationTable, Escalation } from "@/components/case-page/EscalationTable";
+import { EscalationCountCards } from "@/components/case-page/EscalationCountCards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
