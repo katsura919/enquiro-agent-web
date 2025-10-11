@@ -222,8 +222,8 @@ export function NewTabPage({ tab }: NewTabPageProps) {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center group-hover:bg-muted/80 transition-colors">
-                          <IconComponent className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <IconComponent className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium group-hover:text-primary transition-colors">
@@ -243,7 +243,7 @@ export function NewTabPage({ tab }: NewTabPageProps) {
         </div>
 
         {/* Quick Tips */}
-        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <Card className="bg-card shadow-none border-muted-gray">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Star className="w-5 h-5" />
@@ -251,9 +251,6 @@ export function NewTabPage({ tab }: NewTabPageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm">
-              • Use <kbd className="px-2 py-1 text-xs bg-muted rounded">Ctrl+T</kbd> to quickly open a new tab
-            </p>
             <p className="text-sm">
               • Right-click on tabs for additional options
             </p>

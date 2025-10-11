@@ -220,8 +220,8 @@ export function OverviewTab({ tab }: OverviewTabProps) {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center group-hover:bg-muted/80 transition-colors">
-                          <IconComponent className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <IconComponent className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium group-hover:text-primary transition-colors">
