@@ -242,26 +242,6 @@ export function NewTabPage({ tab }: NewTabPageProps) {
           </div>
         </div>
 
-        {/* Quick Tips */}
-        <Card className="bg-card shadow-none border-muted-gray">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Star className="w-5 h-5" />
-              Pro Tips
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">
-              • Right-click on tabs for additional options
-            </p>
-            <p className="text-sm">
-              • Use the global search at the top to find anything quickly
-            </p>
-            <p className="text-sm">
-              • Pin frequently used tabs for easy access
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

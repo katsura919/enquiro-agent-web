@@ -194,7 +194,7 @@ export default function AgentToolsBar() {
   const StatusIcon = status.icon;
 
   return (
-    <div className="border-t bg-background/95 backdrop-blur-sm shadow-lg">
+    <div className="border-t border-muted-gray bg-card backdrop-blur-sm shadow-lg">
       <div className="flex items-center justify-between px-4 py-2">
         {/* Left side - Agent status */}
         <div className="flex items-center gap-4">

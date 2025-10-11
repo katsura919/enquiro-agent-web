@@ -62,8 +62,8 @@ export function TopBar() {
 
   return (
     <>
-    <div className="h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="flex h-full items-center justify-between px-4">
+    <div className="h-14 border-b border-border bg-card backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="flex h-full items-center justify-between px-4 bg-card border-muted-gray">
         {/* Left side - Brand and New Tab */}
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -74,18 +74,7 @@ export function TopBar() {
           </Link>
         </div>
 
-        {/* Center - Global Search */}
-        <div className="flex-1 max-w-md mx-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search cases, products, or customers..."
-              className="w-full h-9 pl-10 pr-4 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-              onFocus={handleSearch}
-            />
-          </div>
-        </div>
+
 
         {/* Right side - Actions and User */}
         <div className="flex items-center gap-2">
@@ -103,18 +92,7 @@ export function TopBar() {
             )}
           </Button>
 
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 relative">
-            <Bell className="w-4 h-4" />
-            {notifications > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
-              >
-                {notifications > 9 ? "9+" : notifications}
-              </Badge>
-            )}
-          </Button>
+
 
           {/* Help */}
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
