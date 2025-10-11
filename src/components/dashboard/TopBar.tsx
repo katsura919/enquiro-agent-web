@@ -83,7 +83,7 @@ export function TopBar() {
             variant="ghost"
             size="sm"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 cursor-pointer"
           >
             {theme === "light" ? (
               <Moon className="w-4 h-4" />
