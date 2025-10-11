@@ -45,6 +45,7 @@ import {
   RefreshCw,
   XCircle,
   Trash2,
+  StickyNote,
 } from "lucide-react";
 
 const tabIcons = {
@@ -58,6 +59,7 @@ const tabIcons = {
   'policy-search': Shield,
   'profile': User,
   'case-details': FileText,
+  'notes': StickyNote,
   'new-tab': Plus,
 };
 

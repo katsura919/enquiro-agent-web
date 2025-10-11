@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, FileText, Send, Trash2, User, Eye } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useTabs } from "@/context/TabsContext";
 
 export interface CaseNote {
   id: string
@@ -19,6 +20,14 @@ interface CaseNotesPreviewProps {
   onDeleteNote: (id: string) => void;
   formatDate: (dateString: string) => string;
   maxDisplay?: number;
+  escalationData?: {
+    escalationId: string;
+    caseNumber?: string;
+    customerName?: string;
+    customerEmail?: string;
+    concern?: string;
+    status?: string;
+  };
 }
 
 export function CaseNotesPreview({
@@ -26,12 +35,11 @@ export function CaseNotesPreview({
   onAddNote,
   onDeleteNote,
   formatDate,
-  maxDisplay = 3
+  maxDisplay = 3,
+  escalationData
 }: CaseNotesPreviewProps) {
   const [noteText, setNoteText] = React.useState("");
-  const router = useRouter();
-  const params = useParams();
-  const { id } = params as { id: string };
+  const { openTab } = useTabs();
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
@@ -40,7 +48,24 @@ export function CaseNotesPreview({
   };
 
   const handleViewAllNotes = () => {
-    router.push(`/dashboard/escalations/${id}/notes`);
+    if (!escalationData?.escalationId) {
+      console.error('No escalation data provided to CaseNotesPreview');
+      alert('Unable to open notes: No case selected');
+      return;
+    }
+    
+    openTab({
+      title: `Notes - ${escalationData.customerName || escalationData.caseNumber || 'Case'}`,
+      type: 'notes',
+      data: {
+        escalationId: escalationData.escalationId,
+        caseNumber: escalationData.caseNumber,
+        customerName: escalationData.customerName,
+        customerEmail: escalationData.customerEmail,
+        concern: escalationData.concern,
+        status: escalationData.status,
+      }
+    });
   };
 
   // Simple function to render basic markdown formatting

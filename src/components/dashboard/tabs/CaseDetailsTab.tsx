@@ -552,6 +552,14 @@ function EscalationDetailsWrapper({ escalationId }: { escalationId: string }) {
                 onDeleteNote={deleteNote}
                 formatDate={formatDate}
                 maxDisplay={3}
+                escalationData={{
+                  escalationId: escalation?._id || '',
+                  caseNumber: escalation?.caseNumber,
+                  customerName: escalation?.customerName,
+                  customerEmail: escalation?.customerEmail,
+                  concern: escalation?.concern,
+                  status: escalation?.status,
+                }}
               />            
               <ActivityFeed 
                 activities={activities}

@@ -36,7 +36,7 @@ export function NewTabPage({ tab }: NewTabPageProps) {
       description: "Browse and manage all customer cases",
       icon: FileText,
       color: "from-blue-500 to-blue-600",
-      action: () => openTab({ title: "All Cases", type: "case-details", data: { viewType: "all-cases" } }),
+      action: () => openTab({ title: "Escalations", type: "escalations", data: { viewType: "all-cases" } }),
     },
     {
       title: "View All Products",

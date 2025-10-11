@@ -10,6 +10,7 @@ import ViewFAQTab from "./tabs/ViewFAQTab";
 import ViewPolicyTab from "./tabs/ViewPolicyTab";
 import ViewProfileTab from "./tabs/ViewProfileTab";
 import { CaseDetailsTab } from "./tabs/CaseDetailsTab";
+import { NotesTab } from "./tabs/NotesTab";
 import { NewTabPage } from "./tabs/NewTabPage";
 
 export function TabContent() {
@@ -48,6 +49,8 @@ export function TabContent() {
         return <ViewProfileTab />;
       case 'case-details':
         return <CaseDetailsTab tab={tab} />;
+      case 'notes':
+        return <NotesTab tab={tab} />;
       case 'new-tab':
         return <NewTabPage tab={tab} />;
       default:
