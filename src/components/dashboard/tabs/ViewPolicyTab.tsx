@@ -174,7 +174,7 @@ export default function ViewPolicyTab() {
         <div className="space-y-2">
           <Label className="text-sm font-medium">Policy Type</Label>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-full bg-background">
+            <SelectTrigger className="w-full bg-card shadow-none">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>

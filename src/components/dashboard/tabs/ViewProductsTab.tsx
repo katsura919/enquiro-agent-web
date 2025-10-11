@@ -238,7 +238,7 @@ export default function ViewProducts() {
         <div className="space-y-2">
           <Label className="text-sm font-medium">Category</Label>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full bg-background">
+            <SelectTrigger className="w-full bg-card shadow-none">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>

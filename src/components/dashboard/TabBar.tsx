@@ -119,7 +119,7 @@ export function TabBar() {
 
   return (
     <>
-    <div className="h-10 border-b border-border bg-muted/30 flex items-center">
+    <div className="h-10 border-b border-muted-gray bg-card flex items-center">
       {/* Scroll Left Button */}
       {showScrollButtons && canScrollLeft && (
         <Button
@@ -139,7 +139,7 @@ export function TabBar() {
         onScroll={checkScroll}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        <div ref={tabsContainerRef} className="flex items-center h-full min-w-max">
+        <div ref={tabsContainerRef} className="flex items-center h-full min-w-max bg-card">
           {tabs.map((tab) => {
             const IconComponent = tabIcons[tab.type] || LayoutDashboard;
             const isActive = activeTabId === tab.id;
@@ -172,7 +172,7 @@ export function TabBar() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-4 w-4 p-0 ml-1 shrink-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-opacity"
+                        className="h-4 w-4 p-0 ml-1 shrink-0 opacity-0 group-hover:opacity-100  hover:text-destructive transition-opacity cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           closeTab(tab.id);
@@ -237,7 +237,7 @@ export function TabBar() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 border-r border-border rounded-none hover:bg-accent/30"
+              className="h-8 w-8 p-0 border-r border-border rounded-none hover:bg-accent/30 bg-card cursor-pointer"
               onClick={handleNewTab}
             >
               <Plus className="w-3 h-3" />
@@ -265,7 +265,7 @@ export function TabBar() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 rounded-none"
+              className="h-8 w-8 p-0 rounded-none bg-card cursor-pointer"
             >
               <MoreHorizontal className="w-3 h-3" />
             </Button>
