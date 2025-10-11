@@ -31,7 +31,7 @@ import {
   Moon,
   Sun,
   Search,
-  Plus,
+  Trash2,
   HelpCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -113,7 +113,7 @@ export function TopBar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 px-2 flex items-center gap-2">
+              <Button variant="ghost" className="h-8 px-2 flex items-center gap-2 cursor-pointer">
                 <Avatar className="h-6 w-6">
                   <AvatarImage src="" alt={user?.name || "Agent"} />
                   <AvatarFallback className="text-xs">
@@ -152,7 +152,7 @@ export function TopBar() {
               <DropdownMenuItem
                 onClick={() => setShowResetDialog(true)}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 Reset Tabs
               </DropdownMenuItem>
               <DropdownMenuSeparator />

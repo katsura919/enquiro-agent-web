@@ -18,7 +18,6 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { TabsPersistenceDemo } from "../TabsPersistenceDemo";
 import { useEffect, useState } from "react";
 import { agentService, AgentProfile } from "@/services/agentService";
 import { toast } from "@/hooks/useToast";
@@ -219,7 +218,7 @@ export function SettingsTab({ tab }: SettingsTabProps) {
         </div>
 
         {/* Profile Settings */}
-        <Card>
+        <Card className="bg-card border-muted-gray shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
@@ -275,7 +274,11 @@ export function SettingsTab({ tab }: SettingsTabProps) {
                 <p className="text-xs text-red-500">{phoneError}</p>
               )}
             </div>
-            <Button onClick={handleSaveProfile} disabled={saving}>
+            <Button 
+              onClick={handleSaveProfile} 
+              disabled={saving}
+              className="cursor-pointer"
+              >
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -283,7 +286,6 @@ export function SettingsTab({ tab }: SettingsTabProps) {
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
                   Save Profile
                 </>
               )}
@@ -293,7 +295,7 @@ export function SettingsTab({ tab }: SettingsTabProps) {
 
 
         {/* Security Settings */}
-        <Card>
+        <Card className="bg-card border-muted-gray shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
@@ -394,9 +396,9 @@ export function SettingsTab({ tab }: SettingsTabProps) {
               </div>
             )}
             <Button 
-              variant="outline" 
               onClick={handleChangePassword}
               disabled={changingPassword}
+              className="cursor-pointer"
             >
               {changingPassword ? (
                 <>
