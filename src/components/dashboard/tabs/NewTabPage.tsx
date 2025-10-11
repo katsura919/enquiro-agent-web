@@ -149,7 +149,7 @@ export function NewTabPage({ tab }: NewTabPageProps) {
               return (
                 <Card
                   key={action.title}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group border-0 bg-gradient-to-br from-background to-background/50 backdrop-blur-sm"
+                  className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group bg-card backdrop-blur-sm border-muted-gray shadow-none"
                   onClick={action.action}
                 >
                   <CardContent className="p-6">
@@ -184,12 +184,12 @@ export function NewTabPage({ tab }: NewTabPageProps) {
                 return (
                   <Card
                     key={action.title}
-                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    className="cursor-pointer hover:shadow-sm transition-all duration-200 hover:bg-accent/50 group bg-card shadow-none border-muted-gray"
                     onClick={action.action}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors ">
                           <IconComponent className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -217,7 +217,7 @@ export function NewTabPage({ tab }: NewTabPageProps) {
                 return (
                   <Card
                     key={tool.title}
-                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group bg-card shadow-none border-muted-gray"
                     onClick={tool.action}
                   >
                     <CardContent className="p-4">

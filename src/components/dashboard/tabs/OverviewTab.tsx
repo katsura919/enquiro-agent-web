@@ -147,7 +147,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
               return (
                 <Card
                   key={action.title}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group border-0 bg-gradient-to-br from-background to-background/50 backdrop-blur-sm"
+                  className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group border-muted-gray bg-card backdrop-blur-sm  shadow-none"
                   onClick={action.action}
                 >
                   <CardContent className="p-6">
@@ -182,7 +182,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
                 return (
                   <Card
                     key={action.title}
-                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    className="cursor-pointer hover:shadow-sm transition-all duration-200 hover:bg-accent/50 group bg-card shadow-none border-muted-gray"
                     onClick={action.action}
                   >
                     <CardContent className="p-4">
@@ -215,7 +215,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
                 return (
                   <Card
                     key={tool.title}
-                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group"
+                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-accent/50 group bg-card shadow-none border-muted-gray"
                     onClick={tool.action}
                   >
                     <CardContent className="p-4">
@@ -241,7 +241,7 @@ export function OverviewTab({ tab }: OverviewTabProps) {
         </div>
 
         {/* Quick Tips */}
-        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <Card className="bg-card shadow-none border-muted-gray">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Star className="w-5 h-5" />
@@ -249,9 +249,6 @@ export function OverviewTab({ tab }: OverviewTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm">
-              • Use <kbd className="px-2 py-1 text-xs bg-muted rounded">Ctrl+T</kbd> to quickly open a new tab
-            </p>
             <p className="text-sm">
               • Right-click on tabs for additional options
             </p>
