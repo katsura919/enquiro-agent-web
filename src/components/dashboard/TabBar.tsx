@@ -114,7 +114,6 @@ export function TabBar() {
     { label: 'Search FAQs', type: 'faq-search' as const, icon: BookOpen },
     { label: 'View Policies', type: 'policy-search' as const, icon: Shield },
     { label: 'View Escalations', type: 'escalations' as const, icon: AlertTriangle },
-    { label: 'Case Details', type: 'case-details' as const, icon: FileText },
   ];
 
   return (

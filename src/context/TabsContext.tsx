@@ -53,7 +53,18 @@ const CHAT_WINDOW_STORAGE_KEY = 'agent-dashboard-chat-window';
 // Helper functions for localStorage
 const saveTabsToStorage = (tabs: Tab[], activeTabId: string | null) => {
   try {
-    localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(tabs));
+    // Filter out non-serializable properties like React components
+    const serializableTabs = tabs.map(tab => ({
+      id: tab.id,
+      title: tab.title,
+      type: tab.type,
+      data: tab.data,
+      closeable: tab.closeable,
+      modified: tab.modified
+      // Exclude 'icon' as it's a React component and not serializable
+    }));
+    
+    localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(serializableTabs));
     if (activeTabId) {
       localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTabId);
     }
@@ -64,9 +75,51 @@ const saveTabsToStorage = (tabs: Tab[], activeTabId: string | null) => {
 
 const saveChatWindowToStorage = (chatWindowState: ChatWindowState) => {
   try {
-    localStorage.setItem(CHAT_WINDOW_STORAGE_KEY, JSON.stringify(chatWindowState));
+    // Filter out large message arrays to prevent storage bloat
+    const stateToSave = {
+      ...chatWindowState,
+      messages: chatWindowState.messages ? chatWindowState.messages.slice(-50) : [] // Keep only last 50 messages
+    };
+    localStorage.setItem(CHAT_WINDOW_STORAGE_KEY, JSON.stringify(stateToSave));
   } catch (error) {
     console.warn('Failed to save chat window state to localStorage:', error);
+  }
+};
+
+// Add utility function to check storage usage
+const getStorageUsage = () => {
+  try {
+    let totalSize = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        totalSize += localStorage[key].length + key.length;
+      }
+    }
+    return totalSize;
+  } catch (error) {
+    return 0;
+  }
+};
+
+// Add cleanup function for old data
+const cleanupOldStorage = () => {
+  try {
+    const storageKeys = Object.keys(localStorage);
+    const agentDashboardKeys = storageKeys.filter(key => key.startsWith('agent-dashboard-'));
+    
+    // If we have too many keys or storage is getting full, cleanup
+    if (agentDashboardKeys.length > 10 || getStorageUsage() > 4 * 1024 * 1024) { // 4MB threshold
+      console.warn('TabsContext: Storage cleanup needed');
+      // Keep only the essential keys
+      const essentialKeys = [TABS_STORAGE_KEY, ACTIVE_TAB_STORAGE_KEY, CHAT_WINDOW_STORAGE_KEY];
+      agentDashboardKeys.forEach(key => {
+        if (!essentialKeys.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to cleanup storage:', error);
   }
 };
 
@@ -132,6 +185,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   // Load tabs from localStorage on mount
   useEffect(() => {
+    // Clean up old storage data first
+    cleanupOldStorage();
+    
     const { tabs: savedTabs, activeTabId: savedActiveTabId } = loadTabsFromStorage();
     const savedChatWindow = loadChatWindowFromStorage();
     
@@ -150,14 +206,40 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   // Save tabs to localStorage whenever they change (but only after initialization)
   useEffect(() => {
     if (isInitialized) {
-      saveTabsToStorage(tabs, activeTabId);
+      try {
+        saveTabsToStorage(tabs, activeTabId);
+      } catch (error) {
+        // If storage quota exceeded, try cleanup and save again
+        if (error instanceof Error && error.name === 'QuotaExceededError') {
+          console.warn('Storage quota exceeded, attempting cleanup...');
+          cleanupOldStorage();
+          try {
+            saveTabsToStorage(tabs, activeTabId);
+          } catch (retryError) {
+            console.error('Failed to save tabs even after cleanup:', retryError);
+          }
+        }
+      }
     }
   }, [tabs, activeTabId, isInitialized]);
 
   // Save chat window state to localStorage whenever it changes (but only after initialization)
   useEffect(() => {
     if (isInitialized) {
-      saveChatWindowToStorage(chatWindowState);
+      try {
+        saveChatWindowToStorage(chatWindowState);
+      } catch (error) {
+        // If storage quota exceeded, try cleanup and save again
+        if (error instanceof Error && error.name === 'QuotaExceededError') {
+          console.warn('Storage quota exceeded for chat window, attempting cleanup...');
+          cleanupOldStorage();
+          try {
+            saveChatWindowToStorage(chatWindowState);
+          } catch (retryError) {
+            console.error('Failed to save chat window state even after cleanup:', retryError);
+          }
+        }
+      }
     }
   }, [chatWindowState, isInitialized]);
 
