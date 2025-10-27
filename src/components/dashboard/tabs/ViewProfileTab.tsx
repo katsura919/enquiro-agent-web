@@ -15,6 +15,9 @@ import {
   Star,
   Award,
   Clock,
+  Camera,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +26,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import api from "@/utils/api";
+import { toast } from "sonner";
 
 interface Agent {
   _id: string;
@@ -65,11 +77,17 @@ export default function ViewProfileTab() {
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
     phone: "",
   });
+
+  // Image upload modal state
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (user?._id && user?.businessId) {
@@ -230,6 +248,101 @@ export default function ViewProfileTab() {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Handle file selection
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setOriginalFile(file);
+      setShowImageModal(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle image upload
+  const handleImageUpload = async () => {
+    if (!originalFile) {
+      toast.error('Please select an image');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      
+      const formData = new FormData();
+      formData.append('profilePicture', originalFile);
+
+      const response = await api.post('/agent/profile-picture', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.profilePic) {
+        setAgent(prev => prev ? { ...prev, profilePic: response.data.profilePic } : null);
+        toast.success('Profile picture updated successfully!');
+        setShowImageModal(false);
+        setSelectedImage(null);
+        setOriginalFile(null);
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error('Failed to upload profile picture. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setShowImageModal(false);
+    setSelectedImage(null);
+    setOriginalFile(null);
+  };
+
+  const handleProfilePictureDelete = async () => {
+    if (!agent?.profilePic) return;
+
+    try {
+      setUploadingImage(true);
+      
+      await api.delete('/agent/profile-picture');
+      
+      // Update agent state to remove profile picture
+      setAgent(prev => prev ? { ...prev, profilePic: undefined } : null);
+      toast.success('Profile picture deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting profile picture:', error);
+      toast.error('Failed to delete profile picture. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (file) {
+        handleFileSelect(file);
+      }
+    };
+    fileInput.click();
+  };
+
   const getInitials = (name: string) => {
     if (!name || typeof name !== "string") {
       return "NA";
@@ -315,12 +428,77 @@ export default function ViewProfileTab() {
                 {/* Profile Header */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 px-6 py-8">
                   <div className="flex flex-col items-center text-center">
-                    <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-                      <AvatarImage src={agent.profilePic} alt={agent.name} />
-                      <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                        {getInitials(agent.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative group">
+                      <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
+                        <AvatarImage src={agent.profilePic} alt={agent.name} />
+                        <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                          {getInitials(agent.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      {/* Profile Picture Upload/Delete Overlay */}
+                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={triggerFileInput}
+                            disabled={uploadingImage}
+                            className="h-8 w-8 rounded-full p-0"
+                          >
+                            {uploadingImage ? (
+                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Camera className="h-4 w-4" />
+                            )}
+                          </Button>
+                          {agent.profilePic && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={handleProfilePictureDelete}
+                              disabled={uploadingImage}
+                              className="h-8 w-8 rounded-full p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Upload indicator */}
+                      {uploadingImage && (
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                          <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs">
+                            Uploading...
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Profile Picture Actions for Mobile */}
+                    <div className="mt-2 flex gap-2 md:hidden">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={triggerFileInput}
+                        disabled={uploadingImage}
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Upload
+                      </Button>
+                      {agent.profilePic && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleProfilePictureDelete}
+                          disabled={uploadingImage}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
 
                     <div className="mt-4">
                       {isEditing ? (
@@ -561,6 +739,67 @@ export default function ViewProfileTab() {
             </Card>
           </div>
         </div>
+
+        {/* Image Upload and Preview Modal */}
+        <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Preview Profile Picture
+              </DialogTitle>
+              <DialogDescription>
+                Preview your selected image before uploading it as your profile picture.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {selectedImage && (
+                <div className="relative w-full flex justify-center p-4 bg-muted/30 rounded-lg">
+                  <div className="relative max-w-[400px] w-full">
+                    <img
+                      alt="Image preview"
+                      src={selectedImage}
+                      className="w-full h-auto max-h-[350px] object-contain rounded-lg border-2 border-border shadow-sm"
+                    />
+                    <div className="absolute inset-0 border-2 border-dashed border-primary/50 rounded-lg pointer-events-none opacity-60" />
+                  </div>
+                </div>
+              )}
+              
+
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                onClick={triggerFileInput}
+                variant="outline"
+                disabled={uploadingImage}
+                className="w-full sm:w-auto cursor-pointer"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Choose Image
+              </Button>
+              <Button 
+                onClick={handleImageUpload}
+                disabled={!originalFile || uploadingImage}
+                className="w-full sm:w-auto cursor-pointer"
+              >
+                {uploadingImage ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save 
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
