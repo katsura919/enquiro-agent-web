@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,8 +68,14 @@ export function TopBar() {
         {/* Left side - Brand and New Tab */}
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">E</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+              <Image 
+                src="/logo.png" 
+                alt="Enquiro Logo" 
+                width={32} 
+                height={32}
+                className="w-full h-full object-contain"
+              />
             </div>
             <span className="font-semibold text-lg">Enquiro</span>
           </Link>
