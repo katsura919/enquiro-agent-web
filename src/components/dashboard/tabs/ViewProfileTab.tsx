@@ -27,6 +27,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -69,6 +77,16 @@ interface RatingStats {
   totalRatings: number;
 }
 
+interface Escalation {
+  _id: string;
+  caseNumber: string;
+  customerName: string;
+  customerEmail: string;
+  concern: string;
+  status: "escalated" | "pending" | "resolved";
+  createdAt: string;
+}
+
 export default function ViewProfileTab() {
   const { user } = useAuth();
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -84,6 +102,12 @@ export default function ViewProfileTab() {
     phone: "",
   });
 
+  // Escalations state
+  const [escalations, setEscalations] = useState<Escalation[]>([]);
+  const [escalationsLoading, setEscalationsLoading] = useState(false);
+  const [escalationsPage, setEscalationsPage] = useState(1);
+  const [escalationsTotalPages, setEscalationsTotalPages] = useState(1);
+
   // Image upload modal state
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -93,8 +117,15 @@ export default function ViewProfileTab() {
     if (user?._id && user?.businessId) {
       loadAgentDetails();
       loadAgentRatings();
+      loadAgentEscalations();
     }
   }, [user?._id, user?.businessId]);
+
+  useEffect(() => {
+    if (user?._id) {
+      loadAgentEscalations();
+    }
+  }, [escalationsPage, user?._id]);
 
   const loadAgentDetails = async () => {
     try {
@@ -208,6 +239,38 @@ export default function ViewProfileTab() {
         totalRatings: 0,
       });
     }
+  };
+
+  const loadAgentEscalations = async () => {
+    try {
+      setEscalationsLoading(true);
+      const agentId = user?._id;
+      if (!agentId) return;
+
+      console.log('Fetching escalations for agent ID:', agentId, 'page:', escalationsPage);
+      
+      const response = await api.get(`/escalation/agent/${agentId}`, {
+        params: { 
+          limit: 10, // Show 10 escalations per page
+          page: escalationsPage,
+          status: 'all' 
+        }
+      });
+      
+      setEscalations(response.data.escalations || []);
+      setEscalationsTotalPages(response.data.totalPages || 1);
+      console.log('Agent escalations loaded:', response.data.escalations);
+    } catch (err: any) {
+      console.error('Failed to load agent escalations:', err);
+      // Don't show error for escalations, just keep empty array
+      setEscalations([]);
+    } finally {
+      setEscalationsLoading(false);
+    }
+  };
+
+  const handleEscalationsPageChange = (newPage: number) => {
+    setEscalationsPage(newPage);
   };
 
   const handleEdit = () => {
@@ -365,6 +428,44 @@ export default function ViewProfileTab() {
     });
   };
 
+  const formatTableDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusInfo = (status: Escalation['status']) => {
+    switch (status) {
+      case 'escalated':
+        return { 
+          text: 'Escalated', 
+          className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800' 
+        };
+      case 'pending':
+        return { 
+          text: 'Pending', 
+          className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800' 
+        };
+      case 'resolved':
+        return { 
+          text: 'Resolved', 
+          className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800' 
+        };
+      default:
+        return { 
+          text: status, 
+          className: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-800' 
+        };
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -423,7 +524,7 @@ export default function ViewProfileTab() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Card */}
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-muted-gray shadow-none">
               <CardContent className="p-0">
                 {/* Profile Header */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 px-6 py-8">
@@ -593,7 +694,7 @@ export default function ViewProfileTab() {
           <div className="lg:col-span-2 space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="hover:shadow-md transition-shadow">
+              <Card className="border-muted-gray shadow-none">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-xl">
@@ -609,7 +710,7 @@ export default function ViewProfileTab() {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow">
+              <Card className="border-muted-gray shadow-none">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-green-100 dark:bg-green-900 rounded-xl">
@@ -627,7 +728,7 @@ export default function ViewProfileTab() {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow">
+              <Card className="border-muted-gray shadow-none">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-xl">
@@ -651,90 +752,118 @@ export default function ViewProfileTab() {
               </Card>
             </div>
 
-            {/* Performance Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  Performance Overview
+            {/* Escalations Table */}
+            <Card className="bg-card shadow-none border-muted-gray">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base text-secondary-foreground">
+                  <MessageSquare className="h-4 w-4" />
+                  Recent Escalations
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="text-sm">Active Sessions</span>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {stats?.activeSessions || 0}
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm">Resolved Sessions</span>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {stats?.resolvedSessions || 0}
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-sm">Avg Response Time</span>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {stats?.averageResponseTime
-                        ? `${stats.averageResponseTime.toFixed(1)}s`
-                        : "N/A"}
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="text-sm">Total Messages</span>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {stats?.totalMessages || 0}
-                    </p>
-                  </div>
+              <CardContent className="px-4 pb-4">
+                <div className="bg-card border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-9 text-xs">Case #</TableHead>
+                        <TableHead className="h-9 text-xs">Customer</TableHead>
+                        <TableHead className="h-9 text-xs">Concern</TableHead>
+                        <TableHead className="h-9 text-xs">Status</TableHead>
+                        <TableHead className="h-9 text-xs">Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {escalationsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-[300px]">
+                            <div className="flex items-center justify-center h-full">
+                              <div className="text-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                                <span className="mt-2 text-xs text-muted-foreground block">Loading...</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : escalations.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-[300px]">
+                            <div className="flex items-center justify-center h-full">
+                              <div className="text-center">
+                                <Mail className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                                <span className="text-sm text-muted-foreground">No escalations assigned</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        escalations.map((escalation) => {
+                          const statusInfo = getStatusInfo(escalation.status);
+                          return (
+                            <TableRow 
+                              key={escalation._id}
+                              className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            >
+                              <TableCell className="font-mono text-xs font-medium py-3">
+                                #{escalation.caseNumber}
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  <span className="font-medium text-sm truncate">{escalation.customerName}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className="max-w-[250px] truncate">
+                                  <span className="text-sm">{escalation.concern || 'No concern'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusInfo.className}`}>
+                                  {statusInfo.text}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs text-muted-foreground">{formatTableDate(escalation.createdAt)}</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Account Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Account Status</p>
-                    <p className="text-sm text-muted-foreground">
-                      Your account is active and in good standing
-                    </p>
+                
+                {/* Compact Pagination */}
+                {escalations.length > 0 && escalationsTotalPages > 1 && (
+                  <div className="flex items-center justify-between mt-3 px-1">
+                    <div className="text-xs text-muted-foreground">
+                      Page {escalationsPage} of {escalationsTotalPages}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={escalationsPage <= 1}
+                        onClick={() => handleEscalationsPageChange(escalationsPage - 1)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Previous
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={escalationsPage >= escalationsTotalPages}
+                        onClick={() => handleEscalationsPageChange(escalationsPage + 1)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="default" className="bg-green-500">
-                    Active
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Role</p>
-                    <p className="text-sm text-muted-foreground">
-                      Current role and permissions
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="capitalize">
-                    {agent.role}
-                  </Badge>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
